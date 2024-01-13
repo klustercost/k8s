@@ -1,0 +1,1 @@
+queries for getiing the prices from the providers
