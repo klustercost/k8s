@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kustercost-price
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kustercost-price
+  template:
+    metadata:
+      labels:
+        app: kustercost-price
+    spec:
+      containers:
+        - name: kustercost-price
+          image: ghcr.io/yalos-voios/kustercost-price:latest
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1024Mi
+            requests:
+              cpu: "0.05"
+              memory: 1024Mi
+          ports:
+          - containerPort: 5001

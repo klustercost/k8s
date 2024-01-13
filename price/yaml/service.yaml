@@ -1,0 +1,17 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: kustercost-price
+  labels:
+    app: kustercost-price
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 5001
+  selector:
+    app: kustercost-price
+  type: ClusterIP
+  sessionAffinity: None
+  internalTrafficPolicy: Cluster
