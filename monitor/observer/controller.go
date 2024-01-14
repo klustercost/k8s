@@ -6,6 +6,7 @@ import (
 	"time"
 
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	coreinformers "k8s.io/client-go/informers/core/v1"
@@ -14,20 +15,24 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
+	metricsv "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
 type Controller struct {
 	kubeclientset kubernetes.Interface
 	podsLister    corelisters.PodLister
 	podsSynced    cache.InformerSynced
-
-	podqueue workqueue.RateLimitingInterface
+	podqueue      workqueue.RateLimitingInterface
+	metrics       metricsv.Clientset
+	postgresql    *Postgresql
 }
 
 func NewController(
 	ctx context.Context,
+	metricsClientset *metricsv.Clientset,
 	kubeclientset kubernetes.Interface,
-	podInformer coreinformers.PodInformer) *Controller {
+	podInformer coreinformers.PodInformer,
+	postgres *Postgresql) *Controller {
 
 	logger := klog.FromContext(ctx)
 
@@ -35,7 +40,9 @@ func NewController(
 		kubeclientset: kubeclientset,
 		podsLister:    podInformer.Lister(),
 		podsSynced:    podInformer.Informer().HasSynced,
-		podqueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Pods")}
+		podqueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Pods"),
+		metrics:       *metricsClientset,
+		postgresql:    postgres}
 
 	_, err := podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueuePod,
@@ -89,7 +96,7 @@ func (c *Controller) runWorker(ctx context.Context) {
 
 func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	obj, shutdown := c.podqueue.Get()
-	logger := klog.FromContext(ctx)
+	//logger := klog.FromContext(ctx)
 
 	if shutdown {
 		return false
@@ -114,16 +121,25 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 		}
 
 		namespace, name, err := cache.SplitMetaNamespaceKey(key)
-		logger.Info("namespace", namespace, "name", name)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		podMem, err := c.getPodMemory(namespace, name)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		c.postgresql.InsertPod(namespace, name, podMem, time.Now())
 
 		//TODO:
 		//case 1: starts
-		//1. get resources from metrics server
-		//2. get time start
+		//1. get resources from metrics server DONE
+		//2. get time start TBD
 		//3. get metadata (name, namespace, owener, labels...)
-		//4. insert in db
+		//4. insert in db DONE
 		//case 2: stops
-		//1. mark in db the time stop
+		//1. mark in db the time stop TBD
 		if err != nil {
 			c.podqueue.Forget(obj)
 			runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
@@ -139,4 +155,23 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	}
 
 	return true
+}
+
+// This function retrieves the memory usage of a pod and the start time of the pod
+func (c *Controller) getPodMemory(namespace, name string) (int64, error) {
+	pod, err := c.metrics.MetricsV1beta1().PodMetricses(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	if err != nil {
+		runtime.HandleError(err)
+		return 0, err
+	}
+
+	// Calculate total memory usage for the entire pod
+	var totalMemoryUsageBytes int64
+	for i := 0; i < len(pod.Containers); i++ {
+		totalMemoryUsageBytes += pod.Containers[i].Usage.Memory().Value()
+	}
+
+	//Gets the start time of the pod
+	fmt.Println(namespace, name, totalMemoryUsageBytes/1024/1024, "MB")
+	return totalMemoryUsageBytes, err
 }
