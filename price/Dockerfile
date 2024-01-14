@@ -1,5 +1,5 @@
 ## Build
-FROM python:3.9-buster  AS build
+FROM python:3.12-bullseye  AS build
 
 WORKDIR /app
 
@@ -13,10 +13,10 @@ RUN pip install -r ./requirements.txt
 FROM gcr.io/distroless/python3
 
 COPY --from=build /app /app
-COPY --from=build /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
+COPY --from=build /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 
 WORKDIR /app
-ENV PYTHONPATH=/usr/local/lib/python3.9/site-packages
+ENV PYTHONPATH=/usr/local/lib/python3.12/site-packages
 
 USER nonroot:nonroot
 

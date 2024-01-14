@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: kustercost-price
-          image: ghcr.io/yalos-voios/kustercost-price:latest
+          image: ghcr.io/yalosvoios/kustercost-price:latest
           resources:
             limits:
               cpu: "1"
