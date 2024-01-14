@@ -1,20 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kustercost-price
+  name: klustercost-price
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: kustercost-price
+      app: klustercost-price
   template:
     metadata:
       labels:
-        app: kustercost-price
+        app: klustercost-price
     spec:
       containers:
-        - name: kustercost-price
-          image: ghcr.io/yalosvoios/kustercost-price:latest
+        - name: klustercost-price
+          image: ghcr.io/yalosvoios/klustercost-price:latest
+          env:
+            - name: PROVIDER
+              value: "azure"          
           resources:
             limits:
               cpu: "1"
