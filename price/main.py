@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: UTF-8 -*-
-
 from flask import Flask
 import json
 import logging
@@ -46,10 +43,10 @@ def get():
 
 @app.route('/about')
 def about():
-    return "{\"about\":\"KusterCost Price Server\"}"
+    return "{\"about\":\"klustercost Price Server\"}"
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     from waitress import serve
-    logging.info('This is the KusterCost price server')
+    logging.info('This is the klustercost price server')
     serve(app, host="0.0.0.0", port=5001)

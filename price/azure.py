@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 #https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices
 
 import requests
