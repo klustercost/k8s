@@ -19,6 +19,22 @@ import (
 	metricsv "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
+var (
+	resinc_time        int
+	controller_workers int
+	pg_db_user         string
+	pg_db_pass         string
+	pg_db_name         string
+)
+
+func init() {
+	flag.IntVar(&resinc_time, "resinc_time", 60, "Resinc time for the shared informer factory")
+	flag.IntVar(&controller_workers, "controller_workers", 2, "Number of workers for the controller")
+	flag.StringVar(&pg_db_user, "pg_db_user", "postgres", "Username for the postgresql server login")
+	flag.StringVar(&pg_db_pass, "pg_db_pass", "admin", "Password for the postgresql server login")
+	flag.StringVar(&pg_db_name, "pg_db_name", "klustercost", "Name of the postgresql database")
+}
+
 func get_config(loger logr.Logger) (*rest.Config, error) {
 	config, err := rest.InClusterConfig()
 	if nil == err {
@@ -56,24 +72,24 @@ func main() {
 
 	//Get resources from the metrics server
 	metricsClientset, err := metricsv.NewForConfig(config)
-
-	//Initialize the connection to the postgresql database
-	postgreSql := &Postgresql{}
-
-	//Add the password for the local db
-	//We need to graciously handle the error when the DB is not available
-	err = postgreSql.Initialize("postgres", "", "klustercost")
 	if err != nil {
-		logger.Error(err, "Error initializing the connection to the database")
+		logger.Error(err, "Error connecting to the metrics server")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
-	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, time.Second*30)
 
+	//Initialize the connection to the postgresql database
+	postgreSql, err := NewPostgresql(pg_db_user, pg_db_pass, pg_db_name)
+	if err != nil {
+		logger.Error(err, "Error connecting to the postgresql database")
+	}
+	defer postgreSql.DB.Close()
+
+	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, time.Second*time.Duration(resinc_time))
 	controller := NewController(ctx, metricsClientset, kubeClient, kubeInformerFactory.Core().V1().Pods(), postgreSql)
 
 	kubeInformerFactory.Start(ctx.Done())
 
-	if err = controller.Run(ctx, 2); err != nil {
+	if err = controller.Run(ctx, controller_workers); err != nil {
 		logger.Error(err, "Error running controller")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}

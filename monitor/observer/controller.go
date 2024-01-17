@@ -15,6 +15,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
+	"k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	metricsv "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
@@ -60,7 +61,6 @@ func NewController(
 
 func (c *Controller) enqueuePod(obj interface{}) {
 	pod := obj.(*v1.Pod)
-
 	c.podqueue.Add(pod.ObjectMeta.Namespace + "/" + pod.ObjectMeta.Name)
 }
 
@@ -122,15 +122,30 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 
 		namespace, name, err := cache.SplitMetaNamespaceKey(key)
 		if err != nil {
-			fmt.Println(err)
+			klog.Error(err)
 		}
-
-		podMem, err := c.getPodMemory(namespace, name)
+		//Returns the pod and the pod metrics objects
+		pod, pod_metrics, err := c.initCollectors(namespace, name)
 		if err != nil {
-			fmt.Println(err)
+			klog.Error("Unable to init collectors ", err)
+			return nil
 		}
 
-		c.postgresql.InsertPod(namespace, name, podMem, time.Now())
+		//fmt.Println(namespace, name, podMem/1024/1024, podCpu)
+		record_time, owner, node_name := c.getPodMiscellaneous(pod)
+		if err != nil {
+			klog.Error("Get pod miscellaneous:", err)
+			return nil
+		}
+
+		//Returns the memory and CPU usage of the pod
+		podMem, podCpu := c.getPodConsumption(pod_metrics)
+		//fmt.Println(namespace, name, record_time, owner, node_name)
+
+		err = c.postgresql.InsertPod(name, namespace, record_time, podMem, podCpu, owner, node_name)
+		if err != nil {
+			klog.Error(err)
+		}
 
 		//TODO:
 		//case 1: starts
@@ -157,21 +172,54 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
-// This function retrieves the memory usage of a pod and the start time of the pod
-func (c *Controller) getPodMemory(namespace, name string) (int64, error) {
-	pod, err := c.metrics.MetricsV1beta1().PodMetricses(namespace).Get(context.Background(), name, metav1.GetOptions{})
-	if err != nil {
-		runtime.HandleError(err)
-		return 0, err
-	}
-
+// This function retrieves the memory and CPU usage of a pod
+// It queries the metrics server
+func (c *Controller) getPodConsumption(pod *v1beta1.PodMetrics) (int64, int64) {
 	// Calculate total memory usage for the entire pod
-	var totalMemoryUsageBytes int64
+	var totalMemUsageBytes int64
+	var totalCPUUsageMili int64
+
 	for i := 0; i < len(pod.Containers); i++ {
-		totalMemoryUsageBytes += pod.Containers[i].Usage.Memory().Value()
+		totalMemUsageBytes += pod.Containers[i].Usage.Memory().Value()
+		totalCPUUsageMili += pod.Containers[i].Usage.Cpu().MilliValue()
 	}
 
-	//Gets the start time of the pod
-	fmt.Println(namespace, name, totalMemoryUsageBytes/1024/1024, "MB")
-	return totalMemoryUsageBytes, err
+	return totalMemUsageBytes, totalCPUUsageMili
+}
+
+// This function retrieves the record_time, owner, node_name
+// It queries the API server
+func (c *Controller) getPodMiscellaneous(pod *v1.Pod) (time.Time, string, string) {
+	record_time := time.Now()
+	owner := pod.ObjectMeta.OwnerReferences
+	var owner_name string
+
+	for _, v := range owner {
+		if v.Name != "" {
+			owner_name = string(v.UID)
+
+		} else {
+			owner_name = "No owner"
+		}
+
+	}
+	node_name := pod.Spec.NodeName
+
+	return record_time, owner_name, node_name
+
+}
+
+func (c *Controller) initCollectors(namespace, name string) (*v1.Pod, *v1beta1.PodMetrics, error) {
+	pod, err := c.podsLister.Pods(namespace).Get(name)
+	if err != nil {
+		klog.Error("Error getting pod lister ", err)
+		return nil, nil, err
+	}
+
+	pod_metrics, err := c.metrics.MetricsV1beta1().PodMetricses(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	if err != nil {
+		klog.Error("Error getting pod metrics ", err)
+	}
+
+	return pod, pod_metrics, err
 }
