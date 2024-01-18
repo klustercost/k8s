@@ -125,26 +125,29 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 			klog.Error(err)
 		}
 		//Returns the pod and the pod metrics objects
-		pod, pod_metrics, err := c.initCollectors(namespace, name)
+		pod, err := c.initPodCollector(namespace, name)
 		if err != nil {
-			klog.Error("Unable to init collectors ", err)
+			klog.Error("Unable to init pod collector ", err)
 			return nil
 		}
 
-		//fmt.Println(namespace, name, podMem/1024/1024, podCpu)
-		record_time, owner, node_name := c.getPodMiscellaneous(pod)
-		if err != nil {
-			klog.Error("Get pod miscellaneous:", err)
-			return nil
-		}
+		if pod.Status.Phase == v1.PodRunning {
+			owner_version, owner_kind, owner_name, owner_uid := c.returnOwnerReferences(pod)
+			pod_metrics, err := c.initMetricsCollector(namespace, name)
+			record_time, owner, node_name := c.getPodMiscellaneous(pod)
+			if err != nil {
+				klog.Error("Get pod miscellaneous:", err)
+				return nil
+			}
 
-		//Returns the memory and CPU usage of the pod
-		podMem, podCpu := c.getPodConsumption(pod_metrics)
-		//fmt.Println(namespace, name, record_time, owner, node_name)
+			//Returns the memory and CPU usage of the pod
+			podMem, podCpu := c.getPodConsumption(pod_metrics)
+			fmt.Println("INSERTED:", name, namespace, record_time, podMem, podCpu, owner, node_name)
 
-		err = c.postgresql.InsertPod(name, namespace, record_time, podMem, podCpu, owner, node_name)
-		if err != nil {
-			klog.Error(err)
+			err = c.postgresql.InsertPod(name, namespace, record_time, podMem, podCpu, owner_version, owner_kind, owner_name, owner_uid, node_name)
+			if err != nil {
+				klog.Error(err)
+			}
 		}
 
 		//TODO:
@@ -209,17 +212,30 @@ func (c *Controller) getPodMiscellaneous(pod *v1.Pod) (time.Time, string, string
 
 }
 
-func (c *Controller) initCollectors(namespace, name string) (*v1.Pod, *v1beta1.PodMetrics, error) {
+func (c *Controller) initPodCollector(namespace, name string) (*v1.Pod, error) {
 	pod, err := c.podsLister.Pods(namespace).Get(name)
 	if err != nil {
 		klog.Error("Error getting pod lister ", err)
-		return nil, nil, err
 	}
 
+	return pod, err
+}
+
+func (c *Controller) initMetricsCollector(namespace, name string) (*v1beta1.PodMetrics, error) {
 	pod_metrics, err := c.metrics.MetricsV1beta1().PodMetricses(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		klog.Error("Error getting pod metrics ", err)
 	}
+	return pod_metrics, err
+}
 
-	return pod, pod_metrics, err
+// Returns owner_version, owner_kind, owner_name, owner_uid
+func (c *Controller) returnOwnerReferences(pod *v1.Pod) (string, string, string, string) {
+	owner := pod.ObjectMeta.OwnerReferences
+	for _, v := range owner {
+		if v.Name != "" {
+			return v.APIVersion, v.Kind, v.Name, string(v.UID)
+		}
+	}
+	return "NA", "NA", "NA", "NA"
 }
