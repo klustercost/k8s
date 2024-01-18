@@ -82,7 +82,8 @@ func main() {
 	if err != nil {
 		logger.Error(err, "Error connecting to the postgresql database")
 	}
-	defer postgreSql.DB.Close()
+
+	defer postgreSql.Close()
 
 	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, time.Second*time.Duration(resinc_time))
 	controller := NewController(ctx, metricsClientset, kubeClient, kubeInformerFactory.Core().V1().Pods(), postgreSql)

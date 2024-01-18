@@ -43,3 +43,7 @@ func (p *Postgresql) InsertPod(pod_name, namespace string, record_time time.Time
 	}
 	return nil
 }
+
+func (p *Postgresql) Close() {
+	p.DB.Close()
+}
