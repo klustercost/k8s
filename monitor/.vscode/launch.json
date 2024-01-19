@@ -9,8 +9,9 @@
             "type": "go",
             "request": "launch",
             "mode": "debug",
-            "program": "${workspaceFolder}/observer/",
-            "envFile": "${workspaceFolder}/config/env"
+            "trace": "trace",
+            "program": "${workspaceFolder}/observer",
+            "envFile": "${workspaceFolder}/config/env",
         }
     ]
 }

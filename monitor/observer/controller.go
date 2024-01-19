@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -150,14 +152,6 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 			}
 		}
 
-		//TODO:
-		//case 1: starts
-		//1. get resources from metrics server DONE
-		//2. get time start TBD
-		//3. get metadata (name, namespace, owener, labels...)
-		//4. insert in db DONE
-		//case 2: stops
-		//1. mark in db the time stop TBD
 		if err != nil {
 			c.podqueue.Forget(obj)
 			runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
@@ -175,52 +169,6 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
-// This function retrieves the memory and CPU usage of a pod
-// It queries the metrics server
-func (c *Controller) getPodConsumption(pod *v1beta1.PodMetrics) (int64, int64) {
-	// Calculate total memory usage for the entire pod
-	var totalMemUsageBytes int64
-	var totalCPUUsageMili int64
-
-	for i := 0; i < len(pod.Containers); i++ {
-		totalMemUsageBytes += pod.Containers[i].Usage.Memory().Value()
-		totalCPUUsageMili += pod.Containers[i].Usage.Cpu().MilliValue()
-	}
-
-	return totalMemUsageBytes, totalCPUUsageMili
-}
-
-// This function retrieves the record_time, owner, node_name
-// It queries the API server
-func (c *Controller) getPodMiscellaneous(pod *v1.Pod) (time.Time, string, string) {
-	record_time := time.Now()
-	owner := pod.ObjectMeta.OwnerReferences
-	var owner_name string
-
-	for _, v := range owner {
-		if v.Name != "" {
-			owner_name = string(v.UID)
-
-		} else {
-			owner_name = "No owner"
-		}
-
-	}
-	node_name := pod.Spec.NodeName
-
-	return record_time, owner_name, node_name
-
-}
-
-func (c *Controller) initPodCollector(namespace, name string) (*v1.Pod, error) {
-	pod, err := c.podsLister.Pods(namespace).Get(name)
-	if err != nil {
-		klog.Error("Error getting pod lister ", err)
-	}
-
-	return pod, err
-}
-
 func (c *Controller) initMetricsCollector(namespace, name string) (*v1beta1.PodMetrics, error) {
 	pod_metrics, err := c.metrics.MetricsV1beta1().PodMetricses(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
@@ -229,13 +177,53 @@ func (c *Controller) initMetricsCollector(namespace, name string) (*v1beta1.PodM
 	return pod_metrics, err
 }
 
-// Returns owner_version, owner_kind, owner_name, owner_uid
-func (c *Controller) returnOwnerReferences(pod *v1.Pod) (string, string, string, string) {
-	owner := pod.ObjectMeta.OwnerReferences
-	for _, v := range owner {
-		if v.Name != "" {
-			return v.APIVersion, v.Kind, v.Name, string(v.UID)
-		}
+type EnvVars struct {
+	resinc_time        int
+	controller_workers int
+	pg_db_user         string
+	pg_db_pass         string
+	pg_db_name         string
+}
+
+func initEnvVars() *EnvVars {
+
+	resinc_time, err := strconv.Atoi(os.Getenv("RESINC_TIME"))
+	if err != nil {
+		resinc_time = 60
+		klog.Info("RESINC_TIME not set, using default value of 60")
 	}
-	return "NA", "NA", "NA", "NA"
+
+	controller_workers, err := strconv.Atoi(os.Getenv("CONTROLLER_WORKERS"))
+	if err != nil {
+		controller_workers = 2
+		klog.Info("CONTROLLER_WORKERS not set, using default value of 2")
+	}
+
+	pg_db_user := os.Getenv("PG_DB_USER")
+	if pg_db_user == "" {
+		pg_db_user = "postgres"
+		klog.Info("PG_DB_USER not set, using default value of postgres")
+	}
+
+	pg_db_pass := os.Getenv("PG_DB_PASS")
+	if pg_db_pass == "" {
+		pg_db_pass = "admin"
+		klog.Info("PG_DB_PASS not set, using default value of admin")
+	}
+
+	pg_db_name := os.Getenv("PG_DB_NAME")
+	if pg_db_name == "" {
+		pg_db_name = "klustercost"
+		klog.Info("PG_DB_NAME not set, using default value of klustercost")
+	}
+
+	e := &EnvVars{
+		resinc_time:        resinc_time,
+		controller_workers: controller_workers,
+		pg_db_user:         pg_db_user,
+		pg_db_pass:         pg_db_pass,
+		pg_db_name:         pg_db_name,
+	}
+
+	return e
 }
