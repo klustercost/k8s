@@ -1,0 +1,5 @@
+RESINC_TIME = "60"
+CONTROLLER_WORKERS = "2"
+PG_DB_USER = "postgres"
+PG_DB_PASS = "admin"
+PG_DB_NAME = "klustercost"

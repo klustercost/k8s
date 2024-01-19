@@ -34,7 +34,7 @@ func NewPostgresql(user, password, dbname string) (*Postgresql, error) {
 // Further DB structure to be defined
 func (p *Postgresql) InsertPod(pod_name, namespace string, record_time time.Time, used_mem, used_cpu int64, owner_version, owner_kind, owner_name, owner_uid string, node_name string) error {
 
-	_, err := p.DB.Exec("INSERT INTO klustercost.tbl_pods(pod_name, namespace, record_time, used_mem, used_cpu, owner_version, owner_kind, owner_name, owner_uid, node_name)	VALUES($1, $2, $3, $4, $5, $6, $7,$8, $9, $10)",
+	_, err := p.DB.Exec("INSERT INTO klustercost.tbl_pods(pod_name, namespace, record_time, used_mem, used_cpu, owner_version, owner_kind, owner_name, owner_uid, node_name)	VALUES($1, $2, $3, $4, $5, NULLIF($6,''), NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), $10)",
 		pod_name, namespace, record_time, used_mem, used_cpu, owner_version, owner_kind, owner_name, owner_uid, node_name)
 	if err != nil {
 		klog.Error(err)
