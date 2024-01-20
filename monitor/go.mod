@@ -1,4 +1,4 @@
-module kustercost/monitor
+module klustercost/monitor
 
 go 1.21.4
 
