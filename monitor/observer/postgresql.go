@@ -47,3 +47,15 @@ func (p *Postgresql) InsertPod(pod_name, namespace string, record_time time.Time
 func (p *Postgresql) Close() {
 	p.DB.Close()
 }
+
+func (p *Postgresql) insertNode(node_name string, creation_time time.Time, node_mem, node_cpu int64) error {
+
+	_, err := p.DB.Exec("INSERT INTO klustercost.tbl_nodes(node_name, node_creation_time, node_mem, node_cpu) VALUES($1, $2, $3, $4)",
+		node_name, creation_time, node_mem, node_cpu)
+	if err != nil {
+		klog.Error(err)
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+		return err
+	}
+	return nil
+}
