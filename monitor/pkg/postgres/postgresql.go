@@ -1,4 +1,4 @@
-package main
+package postgres
 
 import (
 	"database/sql"
@@ -48,7 +48,7 @@ func (p *Postgresql) Close() {
 	p.DB.Close()
 }
 
-func (p *Postgresql) insertNode(node_name string, creation_time time.Time, node_mem, node_cpu int64) error {
+func (p *Postgresql) InsertNode(node_name string, creation_time time.Time, node_mem, node_cpu int64) error {
 
 	_, err := p.DB.Exec("INSERT INTO klustercost.tbl_nodes(node_name, node_creation_time, node_mem, node_cpu) VALUES($1, $2, $3, $4)",
 		node_name, creation_time, node_mem, node_cpu)

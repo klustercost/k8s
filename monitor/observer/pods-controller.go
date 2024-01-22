@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"klustercost/monitor/pkg/postgres"
 	"os"
 	"strconv"
 	"time"
@@ -27,7 +28,7 @@ type Controller struct {
 	podsSynced    cache.InformerSynced
 	podqueue      workqueue.RateLimitingInterface
 	metrics       metricsv.Clientset
-	postgresql    *Postgresql
+	postgresql    *postgres.Postgresql
 }
 
 func NewController(
@@ -35,7 +36,7 @@ func NewController(
 	metricsClientset *metricsv.Clientset,
 	kubeclientset kubernetes.Interface,
 	podInformer coreinformers.PodInformer,
-	postgres *Postgresql) *Controller {
+	postgres *postgres.Postgresql) *Controller {
 
 	logger := klog.FromContext(ctx)
 
@@ -226,4 +227,98 @@ func initEnvVars() *EnvVars {
 	}
 
 	return e
+}
+
+func (c *Controller) initPodCollector(namespace, name string) (*v1.Pod, error) {
+	pod, err := c.podsLister.Pods(namespace).Get(name)
+	if err != nil {
+		klog.Error("Error getting pod lister ", err)
+	}
+
+	return pod, err
+}
+
+// Returns owner_version, owner_kind, owner_name, owner_uid
+
+func (c *Controller) returnOwnerReferences(pod *v1.Pod) (string, string, string, string) {
+	owner := pod.ObjectMeta.OwnerReferences
+	for _, v := range owner {
+		if v.Name != "" {
+			return v.APIVersion, v.Kind, v.Name, string(v.UID)
+		}
+	}
+	return "", "", "", ""
+}
+
+// Returns owner_references - THIS IS THE TEST ONE!
+// batchv1 "k8s.io/api/batch/v1"
+// appsv1 "k8s.io/api/apps/v1"
+// v1 "k8s.io/api/core/v1"
+/*func (c *Controller) returnOwnerReferences(obj interface{}) []metav1.OwnerReference {
+
+	switch v := obj.(type) {
+	case *v1.Pod:
+		if v.ObjectMeta.OwnerReferences != nil {
+			return v.ObjectMeta.OwnerReferences
+		}
+	case *appsv1.DaemonSet:
+		if v.ObjectMeta.OwnerReferences != nil {
+			return v.ObjectMeta.OwnerReferences
+		}
+	case *appsv1.Deployment:
+		if v.ObjectMeta.OwnerReferences != nil {
+			return v.ObjectMeta.OwnerReferences
+		}
+	case *appsv1.ReplicaSet:
+		if v.ObjectMeta.OwnerReferences != nil {
+			return v.ObjectMeta.OwnerReferences
+		}
+	case *appsv1.StatefulSet:
+		if v.ObjectMeta.OwnerReferences != nil {
+			return v.ObjectMeta.OwnerReferences
+		}
+	case *batchv1.Job:
+		if v.ObjectMeta.OwnerReferences != nil {
+			return v.ObjectMeta.OwnerReferences
+		}
+	}
+	return nil
+}
+*/
+
+// This function retrieves the record_time, owner, node_name
+// It queries the API server
+func (c *Controller) getPodMiscellaneous(pod *v1.Pod) (time.Time, string, string) {
+	record_time := time.Now()
+	owner := pod.ObjectMeta.OwnerReferences
+	var owner_name string
+
+	for _, v := range owner {
+		if v.Name != "" {
+			owner_name = string(v.UID)
+
+		} else {
+			owner_name = "No owner"
+		}
+
+	}
+	node_name := pod.Spec.NodeName
+
+	return record_time, owner_name, node_name
+
+}
+
+// This function retrieves the memory and CPU usage of a pod
+// It queries the metrics server
+func (c *Controller) getPodConsumption(pod *v1beta1.PodMetrics) (int64, int64) {
+	// Calculate total memory usage for the entire pod
+	var totalMemUsageBytes int64
+	var totalCPUUsageMili int64
+
+	for i := 0; i < len(pod.Containers); i++ {
+		totalMemUsageBytes += pod.Containers[i].Usage.Memory().Value()
+		totalCPUUsageMili += pod.Containers[i].Usage.Cpu().MilliValue()
+	}
+
+	return totalMemUsageBytes, totalCPUUsageMili
 }

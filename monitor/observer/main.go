@@ -6,8 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"kustercost/monitor/pkg/signals"
-	"kustercost/monitor/pkg/version"
+	"klustercost/monitor/pkg/postgres"
+	"klustercost/monitor/pkg/signals"
+	"klustercost/monitor/pkg/version"
 
 	"github.com/go-logr/logr"
 	_ "github.com/lib/pq"
@@ -66,7 +67,7 @@ func main() {
 	}
 
 	//Initialize the connection to the postgresql database
-	postgreSql, err := NewPostgresql(env.pg_db_user, env.pg_db_pass, env.pg_db_name)
+	postgreSql, err := postgres.NewPostgresql(env.pg_db_user, env.pg_db_pass, env.pg_db_name)
 	if err != nil {
 		logger.Error(err, "Error connecting to the postgresql database")
 	}
@@ -89,7 +90,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if err = nodecontroller.RunNode(ctx, env.controller_workers); err != nil {
+		if err = nodecontroller.Run(ctx, env.controller_workers); err != nil {
 			logger.Error(err, "Error running node controller")
 			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		}
