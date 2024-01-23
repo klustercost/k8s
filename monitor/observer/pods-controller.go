@@ -137,17 +137,20 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 		if pod.Status.Phase == v1.PodRunning {
 			owner_version, owner_kind, owner_name, owner_uid := c.returnOwnerReferences(pod)
 			pod_metrics, err := c.initMetricsCollector(namespace, name)
-			record_time, owner, node_name := c.getPodMiscellaneous(pod)
+			record_time, owner, own_uid, labels, node_name := c.getPodMiscellaneous(pod)
 			if err != nil {
 				klog.Error("Get pod miscellaneous:", err)
 				return nil
 			}
 
+			//Not efficient to use at the moment, whole functionality to be redefined
+			labels_string := mapToString(labels)
+
 			//Returns the memory and CPU usage of the pod
 			podMem, podCpu := c.getPodConsumption(pod_metrics)
 			fmt.Println("INSERTED:", name, namespace, record_time, podMem, podCpu, owner, node_name)
 
-			err = c.postgresql.InsertPod(name, namespace, record_time, podMem, podCpu, owner_version, owner_kind, owner_name, owner_uid, node_name)
+			err = c.postgresql.InsertPod(name, namespace, record_time, podMem, podCpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels_string, node_name)
 			if err != nil {
 				klog.Error(err)
 			}
@@ -288,7 +291,7 @@ func (c *Controller) returnOwnerReferences(pod *v1.Pod) (string, string, string,
 
 // This function retrieves the record_time, owner, node_name
 // It queries the API server
-func (c *Controller) getPodMiscellaneous(pod *v1.Pod) (time.Time, string, string) {
+func (c *Controller) getPodMiscellaneous(pod *v1.Pod) (time.Time, string, string, map[string]string, string) {
 	record_time := time.Now()
 	owner := pod.ObjectMeta.OwnerReferences
 	var owner_name string
@@ -302,9 +305,11 @@ func (c *Controller) getPodMiscellaneous(pod *v1.Pod) (time.Time, string, string
 		}
 
 	}
+	own_uid := pod.ObjectMeta.UID
 	node_name := pod.Spec.NodeName
+	labels := pod.ObjectMeta.Labels
 
-	return record_time, owner_name, node_name
+	return record_time, owner_name, string(own_uid), labels, node_name
 
 }
 
@@ -321,4 +326,14 @@ func (c *Controller) getPodConsumption(pod *v1beta1.PodMetrics) (int64, int64) {
 	}
 
 	return totalMemUsageBytes, totalCPUUsageMili
+}
+
+// Helper function to convert the labels map to a string
+// Not efficient to use at the moment, whole functionality to be redefined
+func mapToString(m map[string]string) string {
+	var str string
+	for key, value := range m {
+		str += fmt.Sprintf("%s: %s\n", key, value)
+	}
+	return str
 }

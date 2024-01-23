@@ -77,6 +77,7 @@ func main() {
 	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, time.Second*time.Duration(env.resinc_time))
 	controller := NewController(ctx, metricsClientset, kubeClient, kubeInformerFactory.Core().V1().Pods(), postgreSql)
 	nodecontroller := NewNodeController(ctx, metricsClientset, kubeClient, kubeInformerFactory.Core().V1().Nodes(), postgreSql)
+	appcontroller := NewAppController(ctx, metricsClientset, kubeClient, kubeInformerFactory, postgreSql)
 
 	kubeInformerFactory.Start(ctx.Done())
 	wg.Add(1)
@@ -91,6 +92,14 @@ func main() {
 	go func() {
 		defer wg.Done()
 		if err = nodecontroller.Run(ctx, env.controller_workers); err != nil {
+			logger.Error(err, "Error running node controller")
+			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+		}
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err = appcontroller.Run(ctx, env.controller_workers); err != nil {
 			logger.Error(err, "Error running node controller")
 			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		}

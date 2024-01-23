@@ -124,8 +124,8 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 			klog.Error("Unable to init pod collector ", err)
 			return nil
 		}
-		record_time, node_mem, node_cpu := nc.getNodeMiscellaneous(node)
-		err = nc.postgresql.InsertNode(nodeName.Name, record_time, node_mem, node_cpu)
+		record_time, node_mem, node_cpu, node_uid := nc.getNodeMiscellaneous(node)
+		err = nc.postgresql.InsertNode(nodeName.Name, record_time, node_mem, node_cpu, node_uid)
 
 		if err != nil {
 			nc.nodequeue.Forget(obj)
@@ -153,11 +153,12 @@ func (nc *NodeController) initNodeCollector(name string) (*v1.Node, error) {
 	return node, err
 }
 
-func (nc *NodeController) getNodeMiscellaneous(node *v1.Node) (time.Time, int64, int64) {
+func (nc *NodeController) getNodeMiscellaneous(node *v1.Node) (time.Time, int64, int64, string) {
 
 	creation_time := node.CreationTimestamp.Time
 	node_mem := node.Status.Capacity.Memory().Value()
 	node_cpu := node.Status.Capacity.Cpu().Value()
+	node_uid := node.ObjectMeta.UID
 
-	return creation_time, node_mem, node_cpu
+	return creation_time, node_mem, node_cpu, string(node_uid)
 }

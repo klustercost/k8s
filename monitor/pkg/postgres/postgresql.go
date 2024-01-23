@@ -32,10 +32,10 @@ func NewPostgresql(user, password, dbname string) (*Postgresql, error) {
 // This is a preliminary function to test the best way to insert a pod details the database
 // For the moment it just inserts the namespace and name of the found pod
 // Further DB structure to be defined
-func (p *Postgresql) InsertPod(pod_name, namespace string, record_time time.Time, used_mem, used_cpu int64, owner_version, owner_kind, owner_name, owner_uid string, node_name string) error {
+func (p *Postgresql) InsertPod(pod_name, namespace string, record_time time.Time, used_mem, used_cpu int64, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels, node_name string) error {
 
-	_, err := p.DB.Exec("INSERT INTO klustercost.tbl_pods(pod_name, namespace, record_time, used_mem, used_cpu, owner_version, owner_kind, owner_name, owner_uid, node_name)	VALUES($1, $2, $3, $4, $5, NULLIF($6,''), NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), $10)",
-		pod_name, namespace, record_time, used_mem, used_cpu, owner_version, owner_kind, owner_name, owner_uid, node_name)
+	_, err := p.DB.Exec("INSERT INTO klustercost.tbl_pods(pod_name, namespace, record_time, used_mem, used_cpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels, node_name)	VALUES($1, $2, $3, $4, $5, NULLIF($6,''), NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), $10, $11, $12)",
+		pod_name, namespace, record_time, used_mem, used_cpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels, node_name)
 	if err != nil {
 		klog.Error(err)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
@@ -48,10 +48,10 @@ func (p *Postgresql) Close() {
 	p.DB.Close()
 }
 
-func (p *Postgresql) InsertNode(node_name string, creation_time time.Time, node_mem, node_cpu int64) error {
+func (p *Postgresql) InsertNode(node_name string, creation_time time.Time, node_mem, node_cpu int64, node_uid string) error {
 
-	_, err := p.DB.Exec("INSERT INTO klustercost.tbl_nodes(node_name, node_creation_time, node_mem, node_cpu) VALUES($1, $2, $3, $4)",
-		node_name, creation_time, node_mem, node_cpu)
+	_, err := p.DB.Exec("INSERT INTO klustercost.tbl_nodes(node_name, node_creation_time, node_mem, node_cpu, node_uid) VALUES($1, $2, $3, $4, $5)",
+		node_name, creation_time, node_mem, node_cpu, node_uid)
 	if err != nil {
 		klog.Error(err)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
