@@ -59,3 +59,14 @@ func (p *Postgresql) InsertNode(node_name string, creation_time time.Time, node_
 	}
 	return nil
 }
+
+func (p *Postgresql) InsertOwners(name string, namespace string, record_time time.Time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels string) error {
+	_, err := p.DB.Exec("INSERT INTO klustercost.tbl_owners(name, namespace, record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels) VALUES($1, $2, $3, $4, $5, $6, NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), NULLIF($10,''), NULLIF($11,''))",
+		name, namespace, record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels)
+	if err != nil {
+		klog.Error(err)
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+		return err
+	}
+	return nil
+}

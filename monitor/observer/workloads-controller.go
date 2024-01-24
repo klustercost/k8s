@@ -173,10 +173,15 @@ func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 			runtime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
 			return nil
 		}
-		namespace, name, err := cache.SplitMetaNamespaceKey(key)
-		z, x, y := ac.returnOwnerReferences(namespace, name)
 
-		fmt.Println("!!!!AppController: KIND", z, "NS", namespace, "Name:", name, "OwnerRef:", x, "Labels:", y)
+		namespace, name, err := cache.SplitMetaNamespaceKey(key)
+		record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels := ac.returnOwnerReferences(namespace, name)
+
+		err = ac.postgresql.InsertOwners(name, namespace, record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels)
+		if err != nil {
+			klog.Error(err)
+		}
+
 		if err != nil {
 			klog.Error(err)
 		}
@@ -198,8 +203,21 @@ func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
-func (ac *AppController) returnOwnerReferences(namespace, name string) (string, []metav1.OwnerReference, map[string]string) {
+// Returns owner_version, owner_kind, owner_name, owner_uid
+func ownerReferences(owner []metav1.OwnerReference) (string, string, string, string) {
+	for _, v := range owner {
+		if v.Name != "" {
+			return v.APIVersion, v.Kind, v.Name, string(v.UID)
+		}
+	}
+	return "", "", "", ""
+}
 
+// record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels
+func (ac *AppController) returnOwnerReferences(namespace, name string) (time.Time, string, string, string, string, string, string, string, string) {
+	//record_time is the time when the function is run
+	//It is used as a timestamp for the time when data was insterted in the database
+	record_time := time.Now()
 	ds, _ := ac.dsLister.DaemonSets(namespace).Get(name)
 	deploy, _ := ac.deployLister.Deployments(namespace).Get(name)
 	sSet, _ := ac.sSetLister.StatefulSets(namespace).Get(name)
@@ -207,17 +225,25 @@ func (ac *AppController) returnOwnerReferences(namespace, name string) (string, 
 
 	switch {
 	case ds != nil:
-		return ds.TypeMeta.Kind, ds.ObjectMeta.OwnerReferences, ds.Labels
+		owner := ds.ObjectMeta.OwnerReferences
+		owner_version, owner_kind, owner_name, owner_uid := ownerReferences(owner)
+		return record_time, "apps/v1", "DaemonSet", string(ds.UID), owner_version, owner_kind, owner_name, owner_uid, mapToString(ds.Labels)
 	case deploy != nil:
-		return deploy.TypeMeta.Kind, deploy.ObjectMeta.OwnerReferences, deploy.Labels
+		owner := deploy.ObjectMeta.OwnerReferences
+		owner_version, owner_kind, owner_name, owner_uid := ownerReferences(owner)
+		return record_time, "apps/v1", "Deployment", string(deploy.UID), owner_version, owner_kind, owner_name, owner_uid, mapToString(deploy.Labels)
 	case sSet != nil:
-		return sSet.TypeMeta.Kind, deploy.ObjectMeta.OwnerReferences, sSet.Labels
+		owner := sSet.ObjectMeta.OwnerReferences
+		owner_version, owner_kind, owner_name, owner_uid := ownerReferences(owner)
+		return record_time, "apps/v1", "StatefulSet", string(sSet.UID), owner_version, owner_kind, owner_name, owner_uid, mapToString(sSet.Labels)
 	case rSet != nil:
-		return rSet.TypeMeta.Kind, rSet.ObjectMeta.OwnerReferences, rSet.Labels
+		owner := rSet.ObjectMeta.OwnerReferences
+		owner_version, owner_kind, owner_name, owner_uid := ownerReferences(owner)
+		return record_time, "apps/v1", "ReplicaSet", string(rSet.UID), owner_version, owner_kind, owner_name, owner_uid, mapToString(rSet.Labels)
 		/*
 			case *batchv1.Job:
 				return v.ObjectMeta.OwnerReferences*/
 	default:
-		return "", nil, nil
+		return record_time, "", "", "", "", "", "", "", ""
 	}
 }
