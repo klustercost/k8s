@@ -137,7 +137,7 @@ func (ac *AppController) Run(ctx context.Context, workers int) error {
 		go wait.UntilWithContext(ctx, ac.runWorker, time.Second)
 	}
 
-	<-ctx.Done()
+	//<-ctx.Done()
 	logger.Info("Done")
 
 	return nil

@@ -82,7 +82,7 @@ func (nc *NodeController) Run(ctx context.Context, workers int) error {
 		go wait.UntilWithContext(ctx, nc.runWorker, time.Second)
 	}
 
-	<-ctx.Done()
+	//<-ctx.Done()
 	logger.Info("Done")
 
 	return nil

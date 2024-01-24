@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"os"
-	"sync"
 	"time"
 
 	"klustercost/monitor/pkg/postgres"
@@ -37,10 +36,6 @@ func get_config(loger logr.Logger) (*rest.Config, error) {
 }
 
 func main() {
-	//Sync workload go routines via wait groups
-	ch := make(chan int)
-	var wg sync.WaitGroup
-
 	klog.InitFlags(nil)
 	env := initEnvVars()
 	ctx := signals.SetupSignalHandler()
@@ -80,30 +75,20 @@ func main() {
 	appcontroller := NewAppController(ctx, metricsClientset, kubeClient, kubeInformerFactory, postgreSql)
 
 	kubeInformerFactory.Start(ctx.Done())
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err = controller.Run(ctx, env.controller_workers); err != nil {
-			logger.Error(err, "Error running controller")
-			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-		}
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err = nodecontroller.Run(ctx, env.controller_workers); err != nil {
-			logger.Error(err, "Error running node controller")
-			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-		}
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err = appcontroller.Run(ctx, env.controller_workers); err != nil {
-			logger.Error(err, "Error running node controller")
-			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-		}
-	}()
-	wg.Wait()
-	close(ch)
+
+	if err = controller.Run(ctx, env.controller_workers); err != nil {
+		logger.Error(err, "Error running controller")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+	}
+
+	if err = nodecontroller.Run(ctx, env.controller_workers); err != nil {
+		logger.Error(err, "Error running node controller")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+	}
+
+	if err = appcontroller.Run(ctx, env.controller_workers); err != nil {
+		logger.Error(err, "Error running node controller")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+	}
+	<-ctx.Done()
 }

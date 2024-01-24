@@ -87,9 +87,6 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 		go wait.UntilWithContext(ctx, c.runWorker, time.Second)
 	}
 
-	<-ctx.Done()
-	logger.Info("Done")
-
 	return nil
 }
 
