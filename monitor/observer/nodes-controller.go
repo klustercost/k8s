@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"klustercost/monitor/pkg/postgres"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -23,7 +24,7 @@ type NodeController struct {
 	nodesSynced   cache.InformerSynced
 	nodequeue     workqueue.RateLimitingInterface
 	metrics       metricsv.Clientset
-	postgresql    *Postgresql
+	postgresql    *postgres.Postgresql
 }
 
 func NewNodeController(
@@ -31,7 +32,7 @@ func NewNodeController(
 	metricsClientset *metricsv.Clientset,
 	kubeclientset kubernetes.Interface,
 	nodesInformer coreinformers.NodeInformer,
-	postgres *Postgresql) *NodeController {
+	postgres *postgres.Postgresql) *NodeController {
 
 	logger := klog.FromContext(ctx)
 
@@ -62,7 +63,7 @@ func (nc *NodeController) enqueueNode(obj interface{}) {
 	nc.nodequeue.Add(node.ObjectMeta.Name)
 }
 
-func (nc *NodeController) RunNode(ctx context.Context, workers int) error {
+func (nc *NodeController) Run(ctx context.Context, workers int) error {
 
 	defer runtime.HandleCrash()
 
@@ -81,7 +82,7 @@ func (nc *NodeController) RunNode(ctx context.Context, workers int) error {
 		go wait.UntilWithContext(ctx, nc.runWorker, time.Second)
 	}
 
-	<-ctx.Done()
+	//<-ctx.Done()
 	logger.Info("Done")
 
 	return nil
@@ -123,8 +124,8 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 			klog.Error("Unable to init pod collector ", err)
 			return nil
 		}
-		record_time, node_mem, node_cpu := nc.getNodeMiscellaneous(node)
-		err = nc.postgresql.insertNode(nodeName.Name, record_time, node_mem, node_cpu)
+		record_time, node_mem, node_cpu, node_uid := nc.getNodeMiscellaneous(node)
+		err = nc.postgresql.InsertNode(nodeName.Name, record_time, node_mem, node_cpu, node_uid)
 
 		if err != nil {
 			nc.nodequeue.Forget(obj)
@@ -152,11 +153,12 @@ func (nc *NodeController) initNodeCollector(name string) (*v1.Node, error) {
 	return node, err
 }
 
-func (nc *NodeController) getNodeMiscellaneous(node *v1.Node) (time.Time, int64, int64) {
+func (nc *NodeController) getNodeMiscellaneous(node *v1.Node) (time.Time, int64, int64, string) {
 
 	creation_time := node.CreationTimestamp.Time
-	node_mem := node.Status.Allocatable.Memory().Value()
-	node_cpu := node.Status.Allocatable.Cpu().Value()
+	node_mem := node.Status.Capacity.Memory().Value()
+	node_cpu := node.Status.Capacity.Cpu().Value()
+	node_uid := node.ObjectMeta.UID
 
-	return creation_time, node_mem, node_cpu
+	return creation_time, node_mem, node_cpu, string(node_uid)
 }

@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"klustercost/monitor/pkg/postgres"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -27,7 +29,7 @@ type Controller struct {
 	podsSynced    cache.InformerSynced
 	podqueue      workqueue.RateLimitingInterface
 	metrics       metricsv.Clientset
-	postgresql    *Postgresql
+	postgresql    *postgres.Postgresql
 }
 
 func NewController(
@@ -35,7 +37,7 @@ func NewController(
 	metricsClientset *metricsv.Clientset,
 	kubeclientset kubernetes.Interface,
 	podInformer coreinformers.PodInformer,
-	postgres *Postgresql) *Controller {
+	postgres *postgres.Postgresql) *Controller {
 
 	logger := klog.FromContext(ctx)
 
@@ -85,9 +87,6 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 		go wait.UntilWithContext(ctx, c.runWorker, time.Second)
 	}
 
-	<-ctx.Done()
-	logger.Info("Done")
-
 	return nil
 }
 
@@ -136,7 +135,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 		if pod.Status.Phase == v1.PodRunning {
 			owner_version, owner_kind, owner_name, owner_uid := c.returnOwnerReferences(pod)
 			pod_metrics, err := c.initMetricsCollector(namespace, name)
-			record_time, owner, node_name := c.getPodMiscellaneous(pod)
+			record_time, owner, own_uid, labels, node_name := c.getPodMiscellaneous(pod)
 			if err != nil {
 				klog.Error("Get pod miscellaneous:", err)
 				return nil
@@ -146,7 +145,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 			podMem, podCpu := c.getPodConsumption(pod_metrics)
 			fmt.Println("INSERTED:", name, namespace, record_time, podMem, podCpu, owner, node_name)
 
-			err = c.postgresql.InsertPod(name, namespace, record_time, podMem, podCpu, owner_version, owner_kind, owner_name, owner_uid, node_name)
+			err = c.postgresql.InsertPod(name, namespace, record_time, podMem, podCpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels, node_name)
 			if err != nil {
 				klog.Error(err)
 			}
@@ -169,6 +168,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
+// This function retrieves the pod metrics object from the metrics server.
 func (c *Controller) initMetricsCollector(namespace, name string) (*v1beta1.PodMetrics, error) {
 	pod_metrics, err := c.metrics.MetricsV1beta1().PodMetricses(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
@@ -226,4 +226,80 @@ func initEnvVars() *EnvVars {
 	}
 
 	return e
+}
+
+// This function retrieves the pod object from the informer cache.
+func (c *Controller) initPodCollector(namespace, name string) (*v1.Pod, error) {
+	pod, err := c.podsLister.Pods(namespace).Get(name)
+	if err != nil {
+		klog.Error("Error getting pod lister ", err)
+	}
+
+	return pod, err
+}
+
+// Returns owner_version, owner_kind, owner_name, owner_uid of a *v1.Pod
+func (c *Controller) returnOwnerReferences(pod *v1.Pod) (string, string, string, string) {
+	owner := pod.ObjectMeta.OwnerReferences
+	for _, v := range owner {
+		if v.Name != "" {
+			return v.APIVersion, v.Kind, v.Name, string(v.UID)
+		}
+	}
+	return "", "", "", ""
+}
+
+// This function retrieves the record_time, owner_uid, own_uid, labels node_name
+// It queries the API server
+func (c *Controller) getPodMiscellaneous(pod *v1.Pod) (time.Time, string, string, string, string) {
+	//record_time is the time when the function is run
+	//It is used as a timestamp for the time when data was insterted in the database
+	record_time := time.Now()
+	owner := pod.ObjectMeta.OwnerReferences
+	var owner_name string
+
+	for _, v := range owner {
+		if v.Name != "" {
+			owner_name = string(v.UID)
+		}
+	}
+	own_uid := pod.ObjectMeta.UID
+	node_name := pod.Spec.NodeName
+	labels := mapToString(pod.ObjectMeta.Labels)
+
+	return record_time, owner_name, string(own_uid), labels, node_name
+
+}
+
+// This function retrieves the memory and CPU usage of a pod
+// It queries the metrics server
+func (c *Controller) getPodConsumption(pod *v1beta1.PodMetrics) (int64, int64) {
+	// Calculate total memory usage for the entire pod
+	var totalMemUsageBytes int64
+	var totalCPUUsageMili int64
+
+	for i := 0; i < len(pod.Containers); i++ {
+		totalMemUsageBytes += pod.Containers[i].Usage.Memory().Value()
+		totalCPUUsageMili += pod.Containers[i].Usage.Cpu().MilliValue()
+	}
+
+	return totalMemUsageBytes, totalCPUUsageMili
+}
+
+// Helper function to convert values of a map[string]string to a csv string.
+// Map key and value are returned separated by comma key=value,key=value.
+func mapToString(labels map[string]string) string {
+	var sb strings.Builder
+
+	i := 0
+	for key, value := range labels {
+		sb.WriteString(key)
+		sb.WriteString("=")
+		sb.WriteString(value)
+		if i < len(labels)-1 {
+			sb.WriteString(",")
+		}
+		i++
+	}
+	return sb.String()
 }
