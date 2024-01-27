@@ -31,15 +31,13 @@ type AppController struct {
 	rSetSynced    cache.InformerSynced
 	appqueue      workqueue.RateLimitingInterface
 	metrics       metricsv.Clientset
-	postgresql    *postgres.Postgresql
 }
 
 func NewAppController(
 	ctx context.Context,
 	metricsClientset *metricsv.Clientset,
 	kubeclientset kubernetes.Interface,
-	informer informers.SharedInformerFactory,
-	postgres *postgres.Postgresql) *AppController {
+	informer informers.SharedInformerFactory) *AppController {
 
 	//Init informers:
 	dsInformer := informer.Apps().V1().DaemonSets()
@@ -60,8 +58,7 @@ func NewAppController(
 		rSetLister:    rSetInformer.Lister(),
 		rSetSynced:    rSetInformer.Informer().HasSynced,
 		appqueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Apps"),
-		metrics:       *metricsClientset,
-		postgresql:    postgres}
+		metrics:       *metricsClientset}
 
 	_, err := dsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: ac.enqueueApp,
@@ -177,7 +174,7 @@ func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 		namespace, name, err := cache.SplitMetaNamespaceKey(key)
 		record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels := ac.returnOwnerReferences(namespace, name)
 
-		err = ac.postgresql.InsertOwners(name, namespace, record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels)
+		err = postgres.InsertOwners(name, namespace, record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels)
 		if err != nil {
 			klog.Error(err)
 		}

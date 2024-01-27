@@ -29,15 +29,13 @@ type Controller struct {
 	podsSynced    cache.InformerSynced
 	podqueue      workqueue.RateLimitingInterface
 	metrics       metricsv.Clientset
-	postgresql    *postgres.Postgresql
 }
 
 func NewController(
 	ctx context.Context,
 	metricsClientset *metricsv.Clientset,
 	kubeclientset kubernetes.Interface,
-	podInformer coreinformers.PodInformer,
-	postgres *postgres.Postgresql) *Controller {
+	podInformer coreinformers.PodInformer) *Controller {
 
 	logger := klog.FromContext(ctx)
 
@@ -46,8 +44,7 @@ func NewController(
 		podsLister:    podInformer.Lister(),
 		podsSynced:    podInformer.Informer().HasSynced,
 		podqueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Pods"),
-		metrics:       *metricsClientset,
-		postgresql:    postgres}
+		metrics:       *metricsClientset}
 
 	_, err := podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueuePod,
@@ -145,7 +142,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 			podMem, podCpu := c.getPodConsumption(pod_metrics)
 			fmt.Println("INSERTED:", name, namespace, record_time, podMem, podCpu, owner, node_name)
 
-			err = c.postgresql.InsertPod(name, namespace, record_time, podMem, podCpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels, node_name)
+			err = postgres.InsertPod(name, namespace, record_time, podMem, podCpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels, node_name)
 			if err != nil {
 				klog.Error(err)
 			}
@@ -180,9 +177,6 @@ func (c *Controller) initMetricsCollector(namespace, name string) (*v1beta1.PodM
 type EnvVars struct {
 	resinc_time        int
 	controller_workers int
-	pg_db_user         string
-	pg_db_pass         string
-	pg_db_name         string
 }
 
 func initEnvVars() *EnvVars {
@@ -199,30 +193,9 @@ func initEnvVars() *EnvVars {
 		klog.Info("CONTROLLER_WORKERS not set, using default value of 2")
 	}
 
-	pg_db_user := os.Getenv("PG_DB_USER")
-	if pg_db_user == "" {
-		pg_db_user = "postgres"
-		klog.Info("PG_DB_USER not set, using default value of postgres")
-	}
-
-	pg_db_pass := os.Getenv("PG_DB_PASS")
-	if pg_db_pass == "" {
-		pg_db_pass = "admin"
-		klog.Info("PG_DB_PASS not set, using default value of admin")
-	}
-
-	pg_db_name := os.Getenv("PG_DB_NAME")
-	if pg_db_name == "" {
-		pg_db_name = "klustercost"
-		klog.Info("PG_DB_NAME not set, using default value of klustercost")
-	}
-
 	e := &EnvVars{
 		resinc_time:        resinc_time,
 		controller_workers: controller_workers,
-		pg_db_user:         pg_db_user,
-		pg_db_pass:         pg_db_pass,
-		pg_db_name:         pg_db_name,
 	}
 
 	return e
