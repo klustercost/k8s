@@ -30,7 +30,6 @@ type AppController struct {
 	rSetLister    applister.ReplicaSetLister
 	rSetSynced    cache.InformerSynced
 	appqueue      workqueue.RateLimitingInterface
-	metrics       metricsv.Clientset
 	postgresql    *postgres.Postgresql
 }
 
@@ -60,7 +59,6 @@ func NewAppController(
 		rSetLister:    rSetInformer.Lister(),
 		rSetSynced:    rSetInformer.Informer().HasSynced,
 		appqueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Apps"),
-		metrics:       *metricsClientset,
 		postgresql:    postgres}
 
 	_, err := dsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -177,7 +175,7 @@ func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 		namespace, name, err := cache.SplitMetaNamespaceKey(key)
 		record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels := ac.returnOwnerReferences(namespace, name)
 
-		err = ac.postgresql.InsertOwners(name, namespace, record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels)
+		err = ac.postgresql.InsertOwner(name, namespace, record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels)
 		if err != nil {
 			klog.Error(err)
 		}

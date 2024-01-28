@@ -29,6 +29,11 @@ func NewPostgresql(user, password, dbname string) (*Postgresql, error) {
 	return p, err
 }
 
+// Closes the connection to the DB.
+func (p *Postgresql) Close() {
+	p.DB.Close()
+}
+
 // This is a preliminary function to test the best way to insert a pod details the database
 // For the moment it just inserts the namespace and name of the found pod
 // Further DB structure to be defined
@@ -44,10 +49,6 @@ func (p *Postgresql) InsertPod(pod_name, namespace string, record_time time.Time
 	return nil
 }
 
-func (p *Postgresql) Close() {
-	p.DB.Close()
-}
-
 func (p *Postgresql) InsertNode(node_name string, creation_time time.Time, node_mem, node_cpu int64, node_uid string) error {
 
 	_, err := p.DB.Exec("INSERT INTO klustercost.tbl_nodes(node_name, node_creation_time, node_mem, node_cpu, node_uid) VALUES($1, $2, $3, $4, $5)",
@@ -60,7 +61,7 @@ func (p *Postgresql) InsertNode(node_name string, creation_time time.Time, node_
 	return nil
 }
 
-func (p *Postgresql) InsertOwners(name string, namespace string, record_time time.Time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels string) error {
+func (p *Postgresql) InsertOwner(name string, namespace string, record_time time.Time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels string) error {
 	_, err := p.DB.Exec("INSERT INTO klustercost.tbl_owners(name, namespace, record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels) VALUES($1, $2, $3, $4, $5, $6, NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), NULLIF($10,''), NULLIF($11,''))",
 		name, namespace, record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels)
 	if err != nil {

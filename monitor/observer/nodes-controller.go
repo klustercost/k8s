@@ -23,7 +23,6 @@ type NodeController struct {
 	nodesLister   corelisters.NodeLister
 	nodesSynced   cache.InformerSynced
 	nodequeue     workqueue.RateLimitingInterface
-	metrics       metricsv.Clientset
 	postgresql    *postgres.Postgresql
 }
 
@@ -41,7 +40,6 @@ func NewNodeController(
 		nodesLister:   nodesInformer.Lister(),
 		nodesSynced:   nodesInformer.Informer().HasSynced,
 		nodequeue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Nodes"),
-		metrics:       *metricsClientset,
 		postgresql:    postgres}
 
 	_, err := nodesInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -119,12 +117,12 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 			return nil
 		}
 		nodeName, err := cache.ParseObjectName(key)
-		node, err := nc.initNodeCollector(nodeName.Name)
+
+		record_time, node_mem, node_cpu, node_uid := nc.getNodeMiscellaneous(nodeName.Name)
 		if err != nil {
 			klog.Error("Unable to init pod collector ", err)
 			return nil
 		}
-		record_time, node_mem, node_cpu, node_uid := nc.getNodeMiscellaneous(node)
 		err = nc.postgresql.InsertNode(nodeName.Name, record_time, node_mem, node_cpu, node_uid)
 
 		if err != nil {
@@ -144,16 +142,11 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
-func (nc *NodeController) initNodeCollector(name string) (*v1.Node, error) {
+func (nc *NodeController) getNodeMiscellaneous(name string) (time.Time, int64, int64, string) {
 	node, err := nc.nodesLister.Get(name)
 	if err != nil {
 		klog.Error("Error getting node lister ", err)
 	}
-
-	return node, err
-}
-
-func (nc *NodeController) getNodeMiscellaneous(node *v1.Node) (time.Time, int64, int64, string) {
 
 	creation_time := node.CreationTimestamp.Time
 	node_mem := node.Status.Capacity.Memory().Value()

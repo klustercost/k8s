@@ -19,7 +19,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
-	"k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	metricsv "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
@@ -134,7 +133,6 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 
 		if pod.Status.Phase == v1.PodRunning {
 			owner_version, owner_kind, owner_name, owner_uid := c.returnOwnerReferences(pod)
-			pod_metrics, err := c.initMetricsCollector(namespace, name)
 			record_time, owner, own_uid, labels, node_name := c.getPodMiscellaneous(pod)
 			if err != nil {
 				klog.Error("Get pod miscellaneous:", err)
@@ -142,7 +140,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 			}
 
 			//Returns the memory and CPU usage of the pod
-			podMem, podCpu := c.getPodConsumption(pod_metrics)
+			podMem, podCpu := c.getPodConsumption(namespace, name)
 			fmt.Println("INSERTED:", name, namespace, record_time, podMem, podCpu, owner, node_name)
 
 			err = c.postgresql.InsertPod(name, namespace, record_time, podMem, podCpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels, node_name)
@@ -166,15 +164,6 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	}
 
 	return true
-}
-
-// This function retrieves the pod metrics object from the metrics server.
-func (c *Controller) initMetricsCollector(namespace, name string) (*v1beta1.PodMetrics, error) {
-	pod_metrics, err := c.metrics.MetricsV1beta1().PodMetricses(namespace).Get(context.Background(), name, metav1.GetOptions{})
-	if err != nil {
-		klog.Error("Error getting pod metrics ", err)
-	}
-	return pod_metrics, err
 }
 
 type EnvVars struct {
@@ -271,9 +260,16 @@ func (c *Controller) getPodMiscellaneous(pod *v1.Pod) (time.Time, string, string
 
 }
 
-// This function retrieves the memory and CPU usage of a pod
+// This function retrieves the pod metrics object from the metrics server.
+// And then returns the memory and CPU usage of a pod
 // It queries the metrics server
-func (c *Controller) getPodConsumption(pod *v1beta1.PodMetrics) (int64, int64) {
+func (c *Controller) getPodConsumption(namespace, name string) (int64, int64) {
+
+	pod, err := c.metrics.MetricsV1beta1().PodMetricses(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	if err != nil {
+		klog.Error("Error getting pod metrics ", err)
+	}
+
 	// Calculate total memory usage for the entire pod
 	var totalMemUsageBytes int64
 	var totalCPUUsageMili int64
