@@ -9,7 +9,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	coreinformers "k8s.io/client-go/informers/core/v1"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -30,10 +30,11 @@ func NewNodeController(
 	ctx context.Context,
 	metricsClientset *metricsv.Clientset,
 	kubeclientset kubernetes.Interface,
-	nodesInformer coreinformers.NodeInformer,
+	informer informers.SharedInformerFactory,
 	postgres *postgres.Postgresql) *NodeController {
 
 	logger := klog.FromContext(ctx)
+	nodesInformer := informer.Core().V1().Nodes()
 
 	nc := &NodeController{
 		kubeclientset: kubeclientset,

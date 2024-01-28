@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"klustercost/monitor/pkg/postgres"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -13,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	coreinformers "k8s.io/client-go/informers/core/v1"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -35,10 +33,11 @@ func NewController(
 	ctx context.Context,
 	metricsClientset *metricsv.Clientset,
 	kubeclientset kubernetes.Interface,
-	podInformer coreinformers.PodInformer,
+	informer informers.SharedInformerFactory,
 	postgres *postgres.Postgresql) *Controller {
 
 	logger := klog.FromContext(ctx)
+	podInformer := informer.Core().V1().Pods()
 
 	controller := &Controller{
 		kubeclientset: kubeclientset,
@@ -164,57 +163,6 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	}
 
 	return true
-}
-
-type EnvVars struct {
-	resinc_time        int
-	controller_workers int
-	pg_db_user         string
-	pg_db_pass         string
-	pg_db_name         string
-}
-
-func initEnvVars() *EnvVars {
-
-	resinc_time, err := strconv.Atoi(os.Getenv("RESINC_TIME"))
-	if err != nil {
-		resinc_time = 60
-		klog.Info("RESINC_TIME not set, using default value of 60")
-	}
-
-	controller_workers, err := strconv.Atoi(os.Getenv("CONTROLLER_WORKERS"))
-	if err != nil {
-		controller_workers = 2
-		klog.Info("CONTROLLER_WORKERS not set, using default value of 2")
-	}
-
-	pg_db_user := os.Getenv("PG_DB_USER")
-	if pg_db_user == "" {
-		pg_db_user = "postgres"
-		klog.Info("PG_DB_USER not set, using default value of postgres")
-	}
-
-	pg_db_pass := os.Getenv("PG_DB_PASS")
-	if pg_db_pass == "" {
-		pg_db_pass = "admin"
-		klog.Info("PG_DB_PASS not set, using default value of admin")
-	}
-
-	pg_db_name := os.Getenv("PG_DB_NAME")
-	if pg_db_name == "" {
-		pg_db_name = "klustercost"
-		klog.Info("PG_DB_NAME not set, using default value of klustercost")
-	}
-
-	e := &EnvVars{
-		resinc_time:        resinc_time,
-		controller_workers: controller_workers,
-		pg_db_user:         pg_db_user,
-		pg_db_pass:         pg_db_pass,
-		pg_db_name:         pg_db_name,
-	}
-
-	return e
 }
 
 // This function retrieves the pod object from the informer cache.
