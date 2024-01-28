@@ -44,6 +44,8 @@ func main() {
 	logger := klog.FromContext(ctx)
 	logger.Info("Klustercost [Observer]", "v", version.Version)
 
+	defer postgres.Close()
+
 	config, err := get_config(logger)
 	if err != nil {
 		logger.Error(err, "Cannot get a valid k8s context")
@@ -63,18 +65,10 @@ func main() {
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
-	//Initialize the connection to the postgresql database
-	postgreSql, err := postgres.NewPostgresql(env.PgDbUser, env.PgDbPass, env.PgDbName, env.PgDbHost, env.PgDbPort)
-	if err != nil {
-		logger.Error(err, "Error connecting to the postgresql database")
-	}
-
-	defer postgreSql.Close()
-
 	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, time.Second*time.Duration(env.ResincTime))
-	controller := NewController(ctx, metricsClientset, kubeClient, kubeInformerFactory, postgreSql)
-	nodecontroller := NewNodeController(ctx, metricsClientset, kubeClient, kubeInformerFactory, postgreSql)
-	appcontroller := NewAppController(ctx, metricsClientset, kubeClient, kubeInformerFactory, postgreSql)
+	controller := NewController(ctx, metricsClientset, kubeClient, kubeInformerFactory)
+	nodecontroller := NewNodeController(ctx, metricsClientset, kubeClient, kubeInformerFactory)
+	appcontroller := NewAppController(ctx, metricsClientset, kubeClient, kubeInformerFactory)
 
 	kubeInformerFactory.Start(ctx.Done())
 

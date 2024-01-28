@@ -23,15 +23,13 @@ type NodeController struct {
 	nodesLister   corelisters.NodeLister
 	nodesSynced   cache.InformerSynced
 	nodequeue     workqueue.RateLimitingInterface
-	postgresql    *postgres.Postgresql
 }
 
 func NewNodeController(
 	ctx context.Context,
 	metricsClientset *metricsv.Clientset,
 	kubeclientset kubernetes.Interface,
-	informer informers.SharedInformerFactory,
-	postgres *postgres.Postgresql) *NodeController {
+	informer informers.SharedInformerFactory) *NodeController {
 
 	logger := klog.FromContext(ctx)
 	nodesInformer := informer.Core().V1().Nodes()
@@ -40,8 +38,7 @@ func NewNodeController(
 		kubeclientset: kubeclientset,
 		nodesLister:   nodesInformer.Lister(),
 		nodesSynced:   nodesInformer.Informer().HasSynced,
-		nodequeue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Nodes"),
-		postgresql:    postgres}
+		nodequeue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Nodes")}
 
 	_, err := nodesInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: nc.enqueueNode,
@@ -124,7 +121,7 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 			klog.Error("Unable to init pod collector ", err)
 			return nil
 		}
-		err = nc.postgresql.InsertNode(nodeName.Name, record_time, node_mem, node_cpu, node_uid)
+		err = postgres.InsertNode(nodeName.Name, record_time, node_mem, node_cpu, node_uid)
 
 		if err != nil {
 			nc.nodequeue.Forget(obj)

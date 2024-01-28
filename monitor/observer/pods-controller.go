@@ -26,15 +26,13 @@ type Controller struct {
 	podsSynced    cache.InformerSynced
 	podqueue      workqueue.RateLimitingInterface
 	metrics       metricsv.Clientset
-	postgresql    *postgres.Postgresql
 }
 
 func NewController(
 	ctx context.Context,
 	metricsClientset *metricsv.Clientset,
 	kubeclientset kubernetes.Interface,
-	informer informers.SharedInformerFactory,
-	postgres *postgres.Postgresql) *Controller {
+	informer informers.SharedInformerFactory) *Controller {
 
 	logger := klog.FromContext(ctx)
 	podInformer := informer.Core().V1().Pods()
@@ -44,8 +42,7 @@ func NewController(
 		podsLister:    podInformer.Lister(),
 		podsSynced:    podInformer.Informer().HasSynced,
 		podqueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Pods"),
-		metrics:       *metricsClientset,
-		postgresql:    postgres}
+		metrics:       *metricsClientset}
 
 	_, err := podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueuePod,
@@ -142,7 +139,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 			podMem, podCpu := c.getPodConsumption(namespace, name)
 			fmt.Println("INSERTED:", name, namespace, record_time, podMem, podCpu, owner, node_name)
 
-			err = c.postgresql.InsertPod(name, namespace, record_time, podMem, podCpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels, node_name)
+			err = postgres.InsertPod(name, namespace, record_time, podMem, podCpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels, node_name)
 			if err != nil {
 				klog.Error(err)
 			}
