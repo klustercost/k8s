@@ -9,7 +9,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	coreinformers "k8s.io/client-go/informers/core/v1"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -23,26 +23,22 @@ type NodeController struct {
 	nodesLister   corelisters.NodeLister
 	nodesSynced   cache.InformerSynced
 	nodequeue     workqueue.RateLimitingInterface
-	metrics       metricsv.Clientset
-	postgresql    *postgres.Postgresql
 }
 
 func NewNodeController(
 	ctx context.Context,
 	metricsClientset *metricsv.Clientset,
 	kubeclientset kubernetes.Interface,
-	nodesInformer coreinformers.NodeInformer,
-	postgres *postgres.Postgresql) *NodeController {
+	informer informers.SharedInformerFactory) *NodeController {
 
 	logger := klog.FromContext(ctx)
+	nodesInformer := informer.Core().V1().Nodes()
 
 	nc := &NodeController{
 		kubeclientset: kubeclientset,
 		nodesLister:   nodesInformer.Lister(),
 		nodesSynced:   nodesInformer.Informer().HasSynced,
-		nodequeue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Nodes"),
-		metrics:       *metricsClientset,
-		postgresql:    postgres}
+		nodequeue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Nodes")}
 
 	_, err := nodesInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: nc.enqueueNode,
@@ -119,13 +115,16 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 			return nil
 		}
 		nodeName, err := cache.ParseObjectName(key)
-		node, err := nc.initNodeCollector(nodeName.Name)
+		if err != nil {
+			klog.Error(err)
+		}
+
+		nodeMisc := nc.getNodeMiscellaneous(nodeName.Name)
 		if err != nil {
 			klog.Error("Unable to init pod collector ", err)
 			return nil
 		}
-		record_time, node_mem, node_cpu, node_uid := nc.getNodeMiscellaneous(node)
-		err = nc.postgresql.InsertNode(nodeName.Name, record_time, node_mem, node_cpu, node_uid)
+		err = postgres.InsertNode(nodeName.Name, nodeMisc.CreationTime, nodeMisc.Memory, nodeMisc.CPU, nodeMisc.UID)
 
 		if err != nil {
 			nc.nodequeue.Forget(obj)
@@ -144,21 +143,28 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
-func (nc *NodeController) initNodeCollector(name string) (*v1.Node, error) {
+// NodeMisc is a struct that contains the node miscellaneous information
+// It is used to insert data into the database
+type NodeMisc struct {
+	CreationTime time.Time
+	Memory       int64
+	CPU          int64
+	UID          string
+}
+
+// getNodeMiscellaneous returns the node creation time, memory, cpu and UID
+func (nc *NodeController) getNodeMiscellaneous(name string) *NodeMisc {
 	node, err := nc.nodesLister.Get(name)
 	if err != nil {
 		klog.Error("Error getting node lister ", err)
 	}
 
-	return node, err
-}
+	nodeMisc := &NodeMisc{}
 
-func (nc *NodeController) getNodeMiscellaneous(node *v1.Node) (time.Time, int64, int64, string) {
+	nodeMisc.CreationTime = node.CreationTimestamp.Time
+	nodeMisc.Memory = node.Status.Capacity.Memory().Value()
+	nodeMisc.CPU = node.Status.Capacity.Cpu().Value()
+	nodeMisc.UID = string(node.ObjectMeta.UID)
 
-	creation_time := node.CreationTimestamp.Time
-	node_mem := node.Status.Capacity.Memory().Value()
-	node_cpu := node.Status.Capacity.Cpu().Value()
-	node_uid := node.ObjectMeta.UID
-
-	return creation_time, node_mem, node_cpu, string(node_uid)
+	return nodeMisc
 }

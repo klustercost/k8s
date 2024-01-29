@@ -1,5 +1,7 @@
-RESINC_TIME = "60"
-CONTROLLER_WORKERS = "2"
-PG_DB_USER = "postgres"
-PG_DB_PASS = "admin"
-PG_DB_NAME = "klustercost"
+RESINC_TIME = 60
+CONTROLLER_WORKERS = 2
+PG_DB_USER = postgres
+PG_DB_PASS = admin
+PG_DB_NAME = klustercost
+PG_DB_HOST = 127.0.0.1
+PG_DB_PORT = 5432

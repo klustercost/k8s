@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"klustercost/monitor/pkg/env"
 	"klustercost/monitor/pkg/postgres"
 	"klustercost/monitor/pkg/signals"
 	"klustercost/monitor/pkg/version"
@@ -37,10 +38,13 @@ func get_config(loger logr.Logger) (*rest.Config, error) {
 
 func main() {
 	klog.InitFlags(nil)
-	env := initEnvVars()
+	env := env.NewConfiguration()
+
 	ctx := signals.SetupSignalHandler()
 	logger := klog.FromContext(ctx)
 	logger.Info("Klustercost [Observer]", "v", version.Version)
+
+	defer postgres.Close()
 
 	config, err := get_config(logger)
 	if err != nil {
@@ -61,32 +65,24 @@ func main() {
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
-	//Initialize the connection to the postgresql database
-	postgreSql, err := postgres.NewPostgresql(env.pg_db_user, env.pg_db_pass, env.pg_db_name)
-	if err != nil {
-		logger.Error(err, "Error connecting to the postgresql database")
-	}
-
-	defer postgreSql.Close()
-
-	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, time.Second*time.Duration(env.resinc_time))
-	controller := NewController(ctx, metricsClientset, kubeClient, kubeInformerFactory.Core().V1().Pods(), postgreSql)
-	nodecontroller := NewNodeController(ctx, metricsClientset, kubeClient, kubeInformerFactory.Core().V1().Nodes(), postgreSql)
-	appcontroller := NewAppController(ctx, metricsClientset, kubeClient, kubeInformerFactory, postgreSql)
+	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, time.Second*time.Duration(env.ResincTime))
+	controller := NewController(ctx, metricsClientset, kubeClient, kubeInformerFactory)
+	nodecontroller := NewNodeController(ctx, metricsClientset, kubeClient, kubeInformerFactory)
+	appcontroller := NewAppController(ctx, metricsClientset, kubeClient, kubeInformerFactory)
 
 	kubeInformerFactory.Start(ctx.Done())
 
-	if err = controller.Run(ctx, env.controller_workers); err != nil {
+	if err = controller.Run(ctx, env.ControllerWorkers); err != nil {
 		logger.Error(err, "Error running controller")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
-	if err = nodecontroller.Run(ctx, env.controller_workers); err != nil {
+	if err = nodecontroller.Run(ctx, env.ControllerWorkers); err != nil {
 		logger.Error(err, "Error running node controller")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
-	if err = appcontroller.Run(ctx, env.controller_workers); err != nil {
+	if err = appcontroller.Run(ctx, env.ControllerWorkers); err != nil {
 		logger.Error(err, "Error running node controller")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}

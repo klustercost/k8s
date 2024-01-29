@@ -3,38 +3,40 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
+	"klustercost/monitor/pkg/env"
 	"time"
 
 	_ "github.com/lib/pq"
 	"k8s.io/klog/v2"
 )
 
-// DB connection parameters
-// the best way to handle credentials is TBD
-// At the moment they are hardcoded and the DB is hosted locally
+var db_connection *sql.DB = nil
 
-type Postgresql struct {
-	DB *sql.DB
-}
-
-func NewPostgresql(user, password, dbname string) (*Postgresql, error) {
-	p := &Postgresql{}
-	connectionString := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", user, password, dbname)
+func init() {
+	env := env.NewConfiguration()
+	connectionString := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable", env.PgDbUser, env.PgDbPass, env.PgDbName, env.PgDbHost, env.PgDbPort)
 	var err error
-	p.DB, err = sql.Open("postgres", connectionString)
+	db_connection, err = sql.Open("postgres", connectionString)
 	if err != nil {
 		klog.Fatal(err)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
-	return p, err
+
+}
+
+// Closes the connection to the DB.
+func Close() {
+	if db_connection != nil {
+		db_connection.Close()
+	}
 }
 
 // This is a preliminary function to test the best way to insert a pod details the database
 // For the moment it just inserts the namespace and name of the found pod
 // Further DB structure to be defined
-func (p *Postgresql) InsertPod(pod_name, namespace string, record_time time.Time, used_mem, used_cpu int64, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels, node_name string) error {
+func InsertPod(pod_name, namespace string, record_time time.Time, used_mem, used_cpu int64, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels, node_name string) error {
 
-	_, err := p.DB.Exec("INSERT INTO klustercost.tbl_pods(pod_name, namespace, record_time, used_mem, used_cpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels, node_name)	VALUES($1, $2, $3, $4, $5, NULLIF($6,''), NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), $10, $11, $12)",
+	_, err := db_connection.Exec("INSERT INTO klustercost.tbl_pods(pod_name, namespace, record_time, used_mem, used_cpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels, node_name)	VALUES($1, $2, $3, $4, $5, NULLIF($6,''), NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), $10, $11, $12)",
 		pod_name, namespace, record_time, used_mem, used_cpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels, node_name)
 	if err != nil {
 		klog.Error(err)
@@ -44,13 +46,9 @@ func (p *Postgresql) InsertPod(pod_name, namespace string, record_time time.Time
 	return nil
 }
 
-func (p *Postgresql) Close() {
-	p.DB.Close()
-}
+func InsertNode(node_name string, creation_time time.Time, node_mem, node_cpu int64, node_uid string) error {
 
-func (p *Postgresql) InsertNode(node_name string, creation_time time.Time, node_mem, node_cpu int64, node_uid string) error {
-
-	_, err := p.DB.Exec("INSERT INTO klustercost.tbl_nodes(node_name, node_creation_time, node_mem, node_cpu, node_uid) VALUES($1, $2, $3, $4, $5)",
+	_, err := db_connection.Exec("INSERT INTO klustercost.tbl_nodes(node_name, node_creation_time, node_mem, node_cpu, node_uid) VALUES($1, $2, $3, $4, $5)",
 		node_name, creation_time, node_mem, node_cpu, node_uid)
 	if err != nil {
 		klog.Error(err)
@@ -60,8 +58,8 @@ func (p *Postgresql) InsertNode(node_name string, creation_time time.Time, node_
 	return nil
 }
 
-func (p *Postgresql) InsertOwners(name string, namespace string, record_time time.Time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels string) error {
-	_, err := p.DB.Exec("INSERT INTO klustercost.tbl_owners(name, namespace, record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels) VALUES($1, $2, $3, $4, $5, $6, NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), NULLIF($10,''), NULLIF($11,''))",
+func InsertOwner(name string, namespace string, record_time time.Time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels string) error {
+	_, err := db_connection.Exec("INSERT INTO klustercost.tbl_owners(name, namespace, record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels) VALUES($1, $2, $3, $4, $5, $6, NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), NULLIF($10,''), NULLIF($11,''))",
 		name, namespace, record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels)
 	if err != nil {
 		klog.Error(err)
