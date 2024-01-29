@@ -170,9 +170,9 @@ func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 		}
 
 		namespace, name, err := cache.SplitMetaNamespaceKey(key)
-		record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels := ac.returnOwnerReferences(namespace, name)
-
-		err = postgres.InsertOwner(name, namespace, record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels)
+		//record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels := ac.returnOwnerReferences(namespace, name)
+		allRef := ac.returnOwnerReferences(namespace, name)
+		err = postgres.InsertOwner(name, namespace, allRef.RecordTime, allRef.OwnVersion, allRef.OwnKind, allRef.OwnUid, allRef.OwnerVersion, allRef.OwnerKind, allRef.OwnerName, allRef.OwnerUid, allRef.Labels)
 		if err != nil {
 			klog.Error(err)
 		}
@@ -199,46 +199,79 @@ func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 }
 
 // Returns owner_version, owner_kind, owner_name, owner_uid
-func ownerReferences(owner []metav1.OwnerReference) (string, string, string, string) {
+func ownerReferences(owner []metav1.OwnerReference) *OwnerReferences {
+
+	ownerRef := &OwnerReferences{}
+
 	for _, v := range owner {
 		if v.Name != "" {
-			return v.APIVersion, v.Kind, v.Name, string(v.UID)
+			ownerRef.OwnerVersion = v.APIVersion
+			ownerRef.OwnerKind = v.Kind
+			ownerRef.OwnerName = v.Name
+			ownerRef.OwnerUid = string(v.UID)
 		}
 	}
-	return "", "", "", ""
+	return ownerRef
 }
 
 // record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels
-func (ac *AppController) returnOwnerReferences(namespace, name string) (time.Time, string, string, string, string, string, string, string, string) {
+type AppOwnerReferences struct {
+	RecordTime   time.Time
+	OwnVersion   string
+	OwnKind      string
+	OwnUid       string
+	OwnerVersion string
+	OwnerKind    string
+	OwnerName    string
+	OwnerUid     string
+	Labels       string
+}
+
+// record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels
+func (ac *AppController) returnOwnerReferences(namespace, name string) *AppOwnerReferences {
+	appOwnerReference := &AppOwnerReferences{}
 	//record_time is the time when the function is run
 	//It is used as a timestamp for the time when data was insterted in the database
-	record_time := time.Now()
-	ds, _ := ac.dsLister.DaemonSets(namespace).Get(name)
-	deploy, _ := ac.deployLister.Deployments(namespace).Get(name)
-	sSet, _ := ac.sSetLister.StatefulSets(namespace).Get(name)
-	rSet, _ := ac.rSetLister.ReplicaSets(namespace).Get(name)
-
-	switch {
-	case ds != nil:
-		owner := ds.ObjectMeta.OwnerReferences
-		owner_version, owner_kind, owner_name, owner_uid := ownerReferences(owner)
-		return record_time, "apps/v1", "DaemonSet", string(ds.UID), owner_version, owner_kind, owner_name, owner_uid, mapToString(ds.Labels)
-	case deploy != nil:
-		owner := deploy.ObjectMeta.OwnerReferences
-		owner_version, owner_kind, owner_name, owner_uid := ownerReferences(owner)
-		return record_time, "apps/v1", "Deployment", string(deploy.UID), owner_version, owner_kind, owner_name, owner_uid, mapToString(deploy.Labels)
-	case sSet != nil:
-		owner := sSet.ObjectMeta.OwnerReferences
-		owner_version, owner_kind, owner_name, owner_uid := ownerReferences(owner)
-		return record_time, "apps/v1", "StatefulSet", string(sSet.UID), owner_version, owner_kind, owner_name, owner_uid, mapToString(sSet.Labels)
-	case rSet != nil:
-		owner := rSet.ObjectMeta.OwnerReferences
-		owner_version, owner_kind, owner_name, owner_uid := ownerReferences(owner)
-		return record_time, "apps/v1", "ReplicaSet", string(rSet.UID), owner_version, owner_kind, owner_name, owner_uid, mapToString(rSet.Labels)
-		/*
-			case *batchv1.Job:
-				return v.ObjectMeta.OwnerReferences*/
-	default:
-		return record_time, "", "", "", "", "", "", "", ""
+	recordTime := time.Now()
+	if ds, err := ac.dsLister.DaemonSets(namespace).Get(name); err == nil {
+		owner := ds.GetObjectMeta()
+		appOwnerReference = defineOwnerDetails(owner, recordTime, "DaemonSet")
+		return appOwnerReference
 	}
+	if deploy, err := ac.deployLister.Deployments(namespace).Get(name); err == nil {
+		owner := deploy.GetObjectMeta()
+		appOwnerReference = defineOwnerDetails(owner, recordTime, "Deployment")
+		return appOwnerReference
+	}
+	if sSet, err := ac.sSetLister.StatefulSets(namespace).Get(name); err == nil {
+		owner := sSet.GetObjectMeta()
+		appOwnerReference = defineOwnerDetails(owner, recordTime, "StatefulSet")
+		return appOwnerReference
+	}
+	if rSet, err := ac.rSetLister.ReplicaSets(namespace).Get(name); err == nil {
+		owner := rSet.GetObjectMeta()
+		appOwnerReference = defineOwnerDetails(owner, recordTime, "ReplicaSet")
+		return appOwnerReference
+	}
+	return nil
+}
+
+func defineOwnerDetails[T metav1.Object](k8sObj T, recordTime time.Time, kind string) *AppOwnerReferences {
+	appOwnerReference := &AppOwnerReferences{}
+
+	owner := k8sObj.GetOwnerReferences()
+	ownerRef := ownerReferences(owner)
+
+	appOwnerReference.RecordTime = recordTime
+	appOwnerReference.OwnVersion = "apps/v1"
+	appOwnerReference.OwnKind = kind
+	appOwnerReference.OwnUid = string(k8sObj.GetUID())
+	appOwnerReference.OwnerVersion = ownerRef.OwnerVersion
+	appOwnerReference.OwnerKind = ownerRef.OwnerKind
+	appOwnerReference.OwnerName = ownerRef.OwnerName
+	appOwnerReference.OwnerUid = ownerRef.OwnerUid
+	appOwnerReference.Labels = mapToString(k8sObj.GetLabels())
+
+	return appOwnerReference
+
 }

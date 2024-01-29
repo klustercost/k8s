@@ -128,18 +128,18 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 		}
 
 		if pod.Status.Phase == v1.PodRunning {
-			owner_version, owner_kind, owner_name, owner_uid := c.returnOwnerReferences(pod)
-			record_time, owner, own_uid, labels, node_name := c.getPodMiscellaneous(pod)
+			ownerRef := c.returnOwnerReferences(pod)
+			podMisc := c.getPodMiscellaneous(pod)
 			if err != nil {
 				klog.Error("Get pod miscellaneous:", err)
 				return nil
 			}
 
 			//Returns the memory and CPU usage of the pod
-			podMem, podCpu := c.getPodConsumption(namespace, name)
-			fmt.Println("INSERTED:", name, namespace, record_time, podMem, podCpu, owner, node_name)
+			podUsage := c.getPodConsumption(namespace, name)
+			fmt.Println("INSERTED:", name, namespace, podMisc.RecordTime, podUsage.Memory, podUsage.CPU, podMisc.OwnerName, podMisc.NodeName)
 
-			err = postgres.InsertPod(name, namespace, record_time, podMem, podCpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels, node_name)
+			err = postgres.InsertPod(name, namespace, podMisc.RecordTime, podUsage.Memory, podUsage.CPU, ownerRef.OwnerVersion, ownerRef.OwnerKind, ownerRef.OwnerName, ownerRef.OwnerUid, podMisc.OwnUid, podMisc.Labels, podMisc.NodeName)
 			if err != nil {
 				klog.Error(err)
 			}
@@ -172,43 +172,76 @@ func (c *Controller) initPodCollector(namespace, name string) (*v1.Pod, error) {
 	return pod, err
 }
 
+// This struct is used to store the owner_version, owner_kind, owner_name, owner_uid of a *v1.Pod
+// It is used to insert data into the database
+type OwnerReferences struct {
+	OwnerVersion string
+	OwnerKind    string
+	OwnerName    string
+	OwnerUid     string
+}
+
 // Returns owner_version, owner_kind, owner_name, owner_uid of a *v1.Pod
-func (c *Controller) returnOwnerReferences(pod *v1.Pod) (string, string, string, string) {
-	owner := pod.ObjectMeta.OwnerReferences
-	for _, v := range owner {
+func (c *Controller) returnOwnerReferences(pod *v1.Pod) *OwnerReferences {
+
+	ownerRef := &OwnerReferences{}
+
+	for _, v := range pod.ObjectMeta.OwnerReferences {
 		if v.Name != "" {
-			return v.APIVersion, v.Kind, v.Name, string(v.UID)
+			ownerRef.OwnerVersion = v.APIVersion
+			ownerRef.OwnerKind = v.Kind
+			ownerRef.OwnerName = v.Name
+			ownerRef.OwnerUid = string(v.UID)
 		}
 	}
-	return "", "", "", ""
+	return ownerRef
+}
+
+// This struct is used to store the record_time, owner_uid, own_uid, labels node_name
+// It is used to insert data into the database
+type PodMisc struct {
+	RecordTime time.Time
+	OwnerName  string
+	OwnUid     string
+	Labels     string
+	NodeName   string
 }
 
 // This function retrieves the record_time, owner_uid, own_uid, labels node_name
 // It queries the API server
-func (c *Controller) getPodMiscellaneous(pod *v1.Pod) (time.Time, string, string, string, string) {
+func (c *Controller) getPodMiscellaneous(pod *v1.Pod) *PodMisc {
+	misc := &PodMisc{}
 	//record_time is the time when the function is run
 	//It is used as a timestamp for the time when data was insterted in the database
-	record_time := time.Now()
+	misc.RecordTime = time.Now()
 	owner := pod.ObjectMeta.OwnerReferences
-	var owner_name string
 
 	for _, v := range owner {
 		if v.Name != "" {
-			owner_name = string(v.UID)
+			misc.OwnerName = string(v.UID)
 		}
 	}
-	own_uid := pod.ObjectMeta.UID
-	node_name := pod.Spec.NodeName
-	labels := mapToString(pod.ObjectMeta.Labels)
+	misc.OwnUid = string(pod.ObjectMeta.UID)
+	misc.NodeName = pod.Spec.NodeName
+	misc.Labels = mapToString(pod.ObjectMeta.Labels)
 
-	return record_time, owner_name, string(own_uid), labels, node_name
+	return misc
 
+}
+
+// This struct is used to store the memory and CPU usage of a pod
+// It is used to insert data into the database
+type PodConsumption struct {
+	Memory int64
+	CPU    int64
 }
 
 // This function retrieves the pod metrics object from the metrics server.
 // And then returns the memory and CPU usage of a pod
 // It queries the metrics server
-func (c *Controller) getPodConsumption(namespace, name string) (int64, int64) {
+func (c *Controller) getPodConsumption(namespace, name string) *PodConsumption {
+
+	usage := &PodConsumption{}
 
 	pod, err := c.metrics.MetricsV1beta1().PodMetricses(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
@@ -216,15 +249,12 @@ func (c *Controller) getPodConsumption(namespace, name string) (int64, int64) {
 	}
 
 	// Calculate total memory usage for the entire pod
-	var totalMemUsageBytes int64
-	var totalCPUUsageMili int64
-
 	for i := 0; i < len(pod.Containers); i++ {
-		totalMemUsageBytes += pod.Containers[i].Usage.Memory().Value()
-		totalCPUUsageMili += pod.Containers[i].Usage.Cpu().MilliValue()
+		usage.Memory += pod.Containers[i].Usage.Memory().Value()
+		usage.CPU += pod.Containers[i].Usage.Cpu().MilliValue()
 	}
 
-	return totalMemUsageBytes, totalCPUUsageMili
+	return usage
 }
 
 // Helper function to convert values of a map[string]string to a csv string.

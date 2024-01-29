@@ -115,13 +115,16 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 			return nil
 		}
 		nodeName, err := cache.ParseObjectName(key)
+		if err != nil {
+			klog.Error(err)
+		}
 
-		record_time, node_mem, node_cpu, node_uid := nc.getNodeMiscellaneous(nodeName.Name)
+		nodeMisc := nc.getNodeMiscellaneous(nodeName.Name)
 		if err != nil {
 			klog.Error("Unable to init pod collector ", err)
 			return nil
 		}
-		err = postgres.InsertNode(nodeName.Name, record_time, node_mem, node_cpu, node_uid)
+		err = postgres.InsertNode(nodeName.Name, nodeMisc.CreationTime, nodeMisc.Memory, nodeMisc.CPU, nodeMisc.UID)
 
 		if err != nil {
 			nc.nodequeue.Forget(obj)
@@ -140,16 +143,28 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
-func (nc *NodeController) getNodeMiscellaneous(name string) (time.Time, int64, int64, string) {
+// NodeMisc is a struct that contains the node miscellaneous information
+// It is used to insert data into the database
+type NodeMisc struct {
+	CreationTime time.Time
+	Memory       int64
+	CPU          int64
+	UID          string
+}
+
+// getNodeMiscellaneous returns the node creation time, memory, cpu and UID
+func (nc *NodeController) getNodeMiscellaneous(name string) *NodeMisc {
 	node, err := nc.nodesLister.Get(name)
 	if err != nil {
 		klog.Error("Error getting node lister ", err)
 	}
 
-	creation_time := node.CreationTimestamp.Time
-	node_mem := node.Status.Capacity.Memory().Value()
-	node_cpu := node.Status.Capacity.Cpu().Value()
-	node_uid := node.ObjectMeta.UID
+	nodeMisc := &NodeMisc{}
 
-	return creation_time, node_mem, node_cpu, string(node_uid)
+	nodeMisc.CreationTime = node.CreationTimestamp.Time
+	nodeMisc.Memory = node.Status.Capacity.Memory().Value()
+	nodeMisc.CPU = node.Status.Capacity.Cpu().Value()
+	nodeMisc.UID = string(node.ObjectMeta.UID)
+
+	return nodeMisc
 }
