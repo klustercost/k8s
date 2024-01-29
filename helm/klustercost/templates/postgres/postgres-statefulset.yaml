@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-postgres-statefulset
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: {{ .Values.postgresql.image }}
+        envFrom:
+        - configMapRef:
+            name: {{ .Release.Name }}-postgres-config
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: postgres-storage
+        - mountPath: /docker-entrypoint-initdb.d
+          name: init-scripts
+          readOnly: true
+      volumes:
+      - name: postgres-storage
+        {{- if .Values.postgresql.pvc.enabled }}
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-postgres-pvc
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
+      - name: init-scripts
+        configMap:
+          name: {{ .Release.Name }}-postgres-scripts

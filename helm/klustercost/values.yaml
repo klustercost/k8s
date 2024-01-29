@@ -1,0 +1,15 @@
+# Default values for klustercost.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+postgresql:
+  enabled: true
+  image: postgres:latest
+  name: klustercost
+  username: admin
+  password: admin123
+  storageClass: "default"
+  pvc:
+    enabled: false
+    size: 1Gi
+  serviceType: ClusterIP

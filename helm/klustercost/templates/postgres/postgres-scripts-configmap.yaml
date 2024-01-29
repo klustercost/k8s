@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-postgres-scripts
+data:
+  tbl_pods.sql: |
+{{ .Files.Get "sql/tbl_pods.sql" | indent 4 }}
+  tbl_workloads.sql: |
+{{ .Files.Get "sql/tbl_workloads.sql" | indent 4 }}
