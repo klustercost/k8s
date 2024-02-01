@@ -5,5 +5,7 @@ metadata:
 data:
   tbl_pods.sql: |
 {{ .Files.Get "sql/tbl_pods.sql" | indent 4 }}
-  tbl_workloads.sql: |
+  tbl_nodes.sql: |
+{{ .Files.Get "sql/tbl_workloads.sql" | indent 4 }}
+  tbl_owners.sql: |
 {{ .Files.Get "sql/tbl_workloads.sql" | indent 4 }}
