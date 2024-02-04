@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"klustercost/monitor/pkg/postgres"
+	"strings"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -84,11 +85,13 @@ func (nc *NodeController) Run(ctx context.Context, workers int) error {
 	return nil
 }
 
+// runWorker runs a worker to process items from the workqueue
 func (nc *NodeController) runWorker(ctx context.Context) {
 	for nc.processNextWorkItem(ctx) {
 	}
 }
 
+// processNextWorkItem processes items from the workqueue
 func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 	obj, shutdown := nc.nodequeue.Get()
 	//logger := klog.FromContext(ctx)
@@ -124,7 +127,7 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 			klog.Error("Unable to init pod collector ", err)
 			return nil
 		}
-		err = postgres.InsertNode(nodeName.Name, nodeMisc.CreationTime, nodeMisc.Memory, nodeMisc.CPU, nodeMisc.UID)
+		err = postgres.InsertNode(nodeName.Name, nodeMisc.CreationTime, nodeMisc.Memory, nodeMisc.CPU, nodeMisc.UID, nodeMisc.Labels)
 
 		if err != nil {
 			nc.nodequeue.Forget(obj)
@@ -150,6 +153,7 @@ type NodeMisc struct {
 	Memory       int64
 	CPU          int64
 	UID          string
+	Labels       string
 }
 
 // getNodeMiscellaneous returns the node creation time, memory, cpu and UID
@@ -165,6 +169,29 @@ func (nc *NodeController) getNodeMiscellaneous(name string) *NodeMisc {
 	nodeMisc.Memory = node.Status.Capacity.Memory().Value()
 	nodeMisc.CPU = node.Status.Capacity.Cpu().Value()
 	nodeMisc.UID = string(node.ObjectMeta.UID)
+	nodeMisc.Labels = NodeLabelSelector(node.Labels)
 
 	return nodeMisc
+}
+
+// NodeLabelSelector returns a string with the labels of a node
+func NodeLabelSelector(labels map[string]string) string {
+	var nodeLabels = []string{"node.kubernetes.io/instance-type", "topology.kubernetes.io/region", "topology.kubernetes.io/zone", "kubernetes.io/os"}
+	var sb strings.Builder
+
+	for _, label := range nodeLabels {
+		value, exists := labels[label]
+		sb.WriteString(label)
+		if exists {
+			sb.WriteString("=")
+			sb.WriteString(value)
+		}
+		sb.WriteString(",")
+	}
+	// Remove the trailing comma
+	result := sb.String()
+	if len(result) > 0 {
+		result = result[:len(result)-1]
+	}
+	return result
 }

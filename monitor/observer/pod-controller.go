@@ -20,7 +20,7 @@ import (
 	metricsv "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
-type Controller struct {
+type PodController struct {
 	kubeclientset kubernetes.Interface
 	podsLister    corelisters.PodLister
 	podsSynced    cache.InformerSynced
@@ -32,12 +32,12 @@ func NewController(
 	ctx context.Context,
 	metricsClientset *metricsv.Clientset,
 	kubeclientset kubernetes.Interface,
-	informer informers.SharedInformerFactory) *Controller {
+	informer informers.SharedInformerFactory) *PodController {
 
 	logger := klog.FromContext(ctx)
 	podInformer := informer.Core().V1().Pods()
 
-	controller := &Controller{
+	controller := &PodController{
 		kubeclientset: kubeclientset,
 		podsLister:    podInformer.Lister(),
 		podsSynced:    podInformer.Informer().HasSynced,
@@ -58,12 +58,12 @@ func NewController(
 	return controller
 }
 
-func (c *Controller) enqueuePod(obj interface{}) {
+func (c *PodController) enqueuePod(obj interface{}) {
 	pod := obj.(*v1.Pod)
 	c.podqueue.Add(pod.ObjectMeta.Namespace + "/" + pod.ObjectMeta.Name)
 }
 
-func (c *Controller) Run(ctx context.Context, workers int) error {
+func (c *PodController) Run(ctx context.Context, workers int) error {
 
 	defer runtime.HandleCrash()
 
@@ -85,12 +85,12 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 	return nil
 }
 
-func (c *Controller) runWorker(ctx context.Context) {
+func (c *PodController) runWorker(ctx context.Context) {
 	for c.processNextWorkItem(ctx) {
 	}
 }
 
-func (c *Controller) processNextWorkItem(ctx context.Context) bool {
+func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 	obj, shutdown := c.podqueue.Get()
 	//logger := klog.FromContext(ctx)
 
@@ -137,7 +137,6 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 
 			//Returns the memory and CPU usage of the pod
 			podUsage := c.getPodConsumption(namespace, name)
-			fmt.Println("INSERTED:", name, namespace, podMisc.RecordTime, podUsage.Memory, podUsage.CPU, podMisc.OwnerName, podMisc.NodeName)
 
 			err = postgres.InsertPod(name, namespace, podMisc.RecordTime, podUsage.Memory, podUsage.CPU, ownerRef.OwnerVersion, ownerRef.OwnerKind, ownerRef.OwnerName, ownerRef.OwnerUid, podMisc.OwnUid, podMisc.Labels, podMisc.NodeName)
 			if err != nil {
@@ -163,7 +162,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 }
 
 // This function retrieves the pod object from the informer cache.
-func (c *Controller) initPodCollector(namespace, name string) (*v1.Pod, error) {
+func (c *PodController) initPodCollector(namespace, name string) (*v1.Pod, error) {
 	pod, err := c.podsLister.Pods(namespace).Get(name)
 	if err != nil {
 		klog.Error("Error getting pod lister ", err)
@@ -182,7 +181,7 @@ type OwnerReferences struct {
 }
 
 // Returns owner_version, owner_kind, owner_name, owner_uid of a *v1.Pod
-func (c *Controller) returnOwnerReferences(pod *v1.Pod) *OwnerReferences {
+func (c *PodController) returnOwnerReferences(pod *v1.Pod) *OwnerReferences {
 
 	ownerRef := &OwnerReferences{}
 
@@ -209,7 +208,7 @@ type PodMisc struct {
 
 // This function retrieves the record_time, owner_uid, own_uid, labels node_name
 // It queries the API server
-func (c *Controller) getPodMiscellaneous(pod *v1.Pod) *PodMisc {
+func (c *PodController) getPodMiscellaneous(pod *v1.Pod) *PodMisc {
 	misc := &PodMisc{}
 	//record_time is the time when the function is run
 	//It is used as a timestamp for the time when data was insterted in the database
@@ -223,7 +222,7 @@ func (c *Controller) getPodMiscellaneous(pod *v1.Pod) *PodMisc {
 	}
 	misc.OwnUid = string(pod.ObjectMeta.UID)
 	misc.NodeName = pod.Spec.NodeName
-	misc.Labels = mapToString(pod.ObjectMeta.Labels)
+	misc.Labels = MapToString(pod.ObjectMeta.Labels)
 
 	return misc
 
@@ -239,7 +238,7 @@ type PodConsumption struct {
 // This function retrieves the pod metrics object from the metrics server.
 // And then returns the memory and CPU usage of a pod
 // It queries the metrics server
-func (c *Controller) getPodConsumption(namespace, name string) *PodConsumption {
+func (c *PodController) getPodConsumption(namespace, name string) *PodConsumption {
 
 	usage := &PodConsumption{}
 
@@ -259,7 +258,7 @@ func (c *Controller) getPodConsumption(namespace, name string) *PodConsumption {
 
 // Helper function to convert values of a map[string]string to a csv string.
 // Map key and value are returned separated by comma key=value,key=value.
-func mapToString(labels map[string]string) string {
+func MapToString(labels map[string]string) string {
 	var sb strings.Builder
 
 	i := 0

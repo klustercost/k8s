@@ -170,9 +170,9 @@ func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 		}
 
 		namespace, name, err := cache.SplitMetaNamespaceKey(key)
-		//record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels := ac.returnOwnerReferences(namespace, name)
 		allRef := ac.returnOwnerReferences(namespace, name)
 		err = postgres.InsertOwner(name, namespace, allRef.RecordTime, allRef.OwnVersion, allRef.OwnKind, allRef.OwnUid, allRef.OwnerVersion, allRef.OwnerKind, allRef.OwnerName, allRef.OwnerUid, allRef.Labels)
+
 		if err != nil {
 			klog.Error(err)
 		}
@@ -270,7 +270,7 @@ func defineOwnerDetails[T metav1.Object](k8sObj T, recordTime time.Time, kind st
 	appOwnerReference.OwnerKind = ownerRef.OwnerKind
 	appOwnerReference.OwnerName = ownerRef.OwnerName
 	appOwnerReference.OwnerUid = ownerRef.OwnerUid
-	appOwnerReference.Labels = mapToString(k8sObj.GetLabels())
+	appOwnerReference.Labels = MapToString(k8sObj.GetLabels())
 
 	return appOwnerReference
 
