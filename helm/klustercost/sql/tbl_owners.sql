@@ -11,5 +11,5 @@ CREATE TABLE klustercost.tbl_owners (
     owner_kind VARCHAR (100),
     owner_name VARCHAR (100),
     owner_uid VARCHAR (255),
-    labels VARCHAR (255)
+    labels VARCHAR (1000)
 );
