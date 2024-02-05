@@ -43,7 +43,7 @@ spec:
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
       dnsPolicy: ClusterFirst
-      serviceAccountName: kubebuilder
-      serviceAccount: kubebuilder
+      serviceAccountName: klustercost
+      serviceAccount: klustercost
       securityContext: {}
       schedulerName: default-scheduler
