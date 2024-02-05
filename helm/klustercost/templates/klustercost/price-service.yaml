@@ -1,0 +1,17 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: {{ .Release.Name }}-price
+  labels:
+    app: {{ .Release.Name }}-price
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 5001
+  selector:
+    app: {{ .Release.Name }}-price
+  type: ClusterIP
+  sessionAffinity: None
+  internalTrafficPolicy: Cluster
