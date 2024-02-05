@@ -13,3 +13,8 @@ postgresql:
     size: 1Gi
     storageClass: "default"
   serviceType: ClusterIP
+
+monitor:
+  image: klustercost:1
+  resincTime: "300"
+  workers: "2"
