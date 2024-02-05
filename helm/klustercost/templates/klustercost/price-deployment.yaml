@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-price
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-price
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-price
+    spec:
+      containers:
+        - name: {{ .Release.Name }}-price
+          image: ghcr.io/yalosvoios/klustercost-price:latest
+          env:
+            - name: PROVIDER
+              value: "azure"          
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1024Mi
+            requests:
+              cpu: "0.05"
+              memory: 1024Mi
+          ports:
+          - containerPort: 5001
