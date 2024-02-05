@@ -66,13 +66,13 @@ func main() {
 	}
 
 	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, time.Second*time.Duration(env.ResincTime))
-	controller := NewController(ctx, metricsClientset, kubeClient, kubeInformerFactory)
+	podcontroller := NewController(ctx, metricsClientset, kubeClient, kubeInformerFactory)
 	nodecontroller := NewNodeController(ctx, metricsClientset, kubeClient, kubeInformerFactory)
 	appcontroller := NewAppController(ctx, metricsClientset, kubeClient, kubeInformerFactory)
 
 	kubeInformerFactory.Start(ctx.Done())
 
-	if err = controller.Run(ctx, env.ControllerWorkers); err != nil {
+	if err = podcontroller.Run(ctx, env.ControllerWorkers); err != nil {
 		logger.Error(err, "Error running controller")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}

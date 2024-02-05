@@ -5,5 +5,7 @@ CREATE TABLE klustercost.tbl_nodes (
     node_creation_time VARCHAR (100),
     node_mem VARCHAR (100),
     node_cpu VARCHAR (100),
-    node_uid VARCHAR (100)
+    node_uid VARCHAR (100),
+    labels VARCHAR (200),
+    price_per_hour VARCHAR (100)
 );
