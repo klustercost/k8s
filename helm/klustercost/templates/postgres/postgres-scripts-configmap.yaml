@@ -3,9 +3,7 @@ kind: ConfigMap
 metadata:
   name: {{ .Release.Name }}-postgres-scripts
 data:
-  tbl_pods.sql: |
-{{ .Files.Get "sql/tbl_pods.sql" | indent 4 }}
-  tbl_nodes.sql: |
-{{ .Files.Get "sql/tbl_workloads.sql" | indent 4 }}
-  tbl_owners.sql: |
-{{ .Files.Get "sql/tbl_workloads.sql" | indent 4 }}
+{{- range $path, $_ := (.Files.Glob "sql/*") }}
+  {{ trimPrefix "sql/" $path }}: |
+    {{- tpl ($.Files.Get $path) $ | nindent 4 }}
+{{ end }}
