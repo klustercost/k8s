@@ -1,6 +1,6 @@
 CREATE SCHEMA IF NOT EXISTS klustercost;
 CREATE TABLE klustercost.tbl_pods (
-    id serial PRIMARY KEY,
+    idx serial PRIMARY KEY,
     pod_name VARCHAR (100),
     namespace VARCHAR (100),
     record_time VARCHAR (100),
@@ -10,5 +10,7 @@ CREATE TABLE klustercost.tbl_pods (
     owner_kind VARCHAR (100),
     owner_name VARCHAR (100),
     owner_uid VARCHAR (100),
+    own_uid VARCHAR (100),
+    labels VARCHAR (10000),
     node_name VARCHAR (100)
 );

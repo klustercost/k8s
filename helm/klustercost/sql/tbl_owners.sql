@@ -9,6 +9,7 @@ CREATE TABLE klustercost.tbl_owners (
     own_uid VARCHAR (255),
     owner_version VARCHAR (100),
     owner_kind VARCHAR (100),
+    owner_name VARCHAR (100),
     owner_uid VARCHAR (255),
     labels VARCHAR (255)
 );
