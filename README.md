@@ -27,13 +27,13 @@ Before you begin, ensure you have the following:
 
 Follow these steps to install `klustercost` on your cluster:
 
-1. Clone the `klustercost` repository: 
+1. Clone the `klustercost` repository:  
 `git clone https://github.com/yourgithubusername/klustercost.git`
 
-2. Change into the repository directory: 
+2. Change into the repository directory:  
 `cd klustercost`
 
-3. Deploy `klustercost` using Helm: 
+3. Deploy `klustercost` using Helm:  
 `helm install klustercost helm/klustercost`
 
 ## Contributing
