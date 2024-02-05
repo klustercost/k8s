@@ -1,0 +1,49 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: {{ .Release.Name }}-monitor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-monitor
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-monitor
+    spec:
+      containers:
+        - name: {{ .Release.Name }}-monitor
+          image: {{ .Values.monitor.image }}
+          env:
+            - name: RESINC_TIME
+              value: '300'
+            - name: CONTROLLER_WORKERS
+              value: '2'
+            - name: PG_DB_USER
+              value: {{ .Values.postgresql.username }}
+            - name: PG_DB_PASS
+              value: {{ .Values.postgresql.password }}
+            - name: PG_DB_NAME
+              value: {{ .Values.postgresql.name }}
+            - name: PG_DB_HOST
+              value: {{ .Release.Name }}-postgres-service.{{ .Release.Namespace }}.svc.cluster.local
+            - name: PG_DB_PORT
+              value: '5432'
+          resources:
+            limits:
+              cpu: '1'
+              memory: 1Gi
+            requests:
+              cpu: 50m
+              memory: 1Gi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      serviceAccountName: klustercost
+      serviceAccount: klustercost
+      securityContext: {}
+      schedulerName: default-scheduler
