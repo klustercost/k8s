@@ -11,7 +11,7 @@ import (
 
 // EnvVars is a struct that holds the env variables
 type EnvVars struct {
-	ResincTime        int
+	ResyncTime        int
 	ControllerWorkers int
 	PgDbUser          string
 	PgDbPass          string
@@ -45,11 +45,11 @@ func NewConfiguration() *EnvVars {
 	//Defualt values for the env variables
 	result := &EnvVars{60, 2, "postgres", "admin", "klustercost", "localhost", "5432"}
 
-	resinc_time, err := strconv.Atoi(os.Getenv("RESINC_TIME"))
+	resync_time, err := strconv.Atoi(os.Getenv("RESYNC_TIME"))
 	if err == nil {
-		result.ResincTime = resinc_time
+		result.ResyncTime = resync_time
 	} else {
-		klog.Info("RESINC_TIME not set, using default value of 60s")
+		klog.Info("RESYNC_TIME not set, using default value of 60s")
 	}
 
 	controller_workers, err := strconv.Atoi(os.Getenv("CONTROLLER_WORKERS"))

@@ -65,7 +65,7 @@ func main() {
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
-	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, time.Second*time.Duration(env.ResincTime))
+	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, time.Second*time.Duration(env.ResyncTime))
 	podcontroller := NewController(ctx, metricsClientset, kubeClient, kubeInformerFactory)
 	nodecontroller := NewNodeController(ctx, metricsClientset, kubeClient, kubeInformerFactory)
 	appcontroller := NewAppController(ctx, metricsClientset, kubeClient, kubeInformerFactory)
