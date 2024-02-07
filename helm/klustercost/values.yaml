@@ -16,5 +16,5 @@ postgresql:
 
 monitor:
   image: klustercost:1
-  resincTime: "300"
-  workers: "2"
+  resyncTime: 300
+  workers: 3

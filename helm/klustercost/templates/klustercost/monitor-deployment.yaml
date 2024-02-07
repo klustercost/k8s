@@ -17,9 +17,9 @@ spec:
           image: {{ .Values.monitor.image }}
           env:
             - name: RESINC_TIME
-              value: '300'
+              value: "{{ printf "%v" .Values.monitor.resyncTime }}"
             - name: CONTROLLER_WORKERS
-              value: '2'
+              value: "{{ printf "%v" .Values.monitor.workers }}"
             - name: PG_DB_USER
               value: {{ .Values.postgresql.username }}
             - name: PG_DB_PASS
