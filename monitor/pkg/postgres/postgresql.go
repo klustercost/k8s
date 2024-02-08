@@ -46,15 +46,15 @@ func InsertPod(pod_name, namespace string, record_time time.Time, used_mem, used
 
 // This function inserts the details of a node into the database
 // price_per_hour to be added to the function argument and to the query once it is actually defined
-func InsertNode(node_name string, creation_time time.Time, node_mem, node_cpu int64, node_uid, labels string) error {
-	_, err := db_connection.Exec("INSERT INTO klustercost.tbl_nodes(node_name, node_creation_time, node_mem, node_cpu, node_uid, labels, price_per_hour) VALUES($1, $2, $3, $4, $5, $6, NULLIF($7,''))",
-		node_name, creation_time, node_mem, node_cpu, node_uid, labels, "")
+func InsertNode(node_name string, node_mem, node_cpu int64, node_uid, labels string) error {
+	_, err := db_connection.Exec("INSERT INTO klustercost.tbl_nodes(node_name, node_mem, node_cpu, node_uid, labels, price_per_hour) VALUES($1, $2, $3, $4, $5, NULLIF($6,''))",
+		node_name, node_mem, node_cpu, node_uid, labels, "")
 	if err != nil {
 		klog.Error(err)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		return err
 	}
-	fmt.Println("INSERTED Node:", node_name, creation_time, node_mem, node_cpu, node_uid)
+	fmt.Println("INSERTED Node:", node_name, node_mem, node_cpu, node_uid)
 	return nil
 }
 

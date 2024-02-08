@@ -127,7 +127,7 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 			klog.Error("Unable to init pod collector ", err)
 			return nil
 		}
-		err = postgres.InsertNode(nodeName.Name, nodeMisc.CreationTime, nodeMisc.Memory, nodeMisc.CPU, nodeMisc.UID, nodeMisc.Labels)
+		err = postgres.InsertNode(nodeName.Name, nodeMisc.Memory, nodeMisc.CPU, nodeMisc.UID, nodeMisc.Labels)
 
 		if err != nil {
 			nc.nodequeue.Forget(obj)
@@ -149,11 +149,10 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 // NodeMisc is a struct that contains the node miscellaneous information
 // It is used to insert data into the database
 type NodeMisc struct {
-	CreationTime time.Time
-	Memory       int64
-	CPU          int64
-	UID          string
-	Labels       string
+	Memory int64
+	CPU    int64
+	UID    string
+	Labels string
 }
 
 // getNodeMiscellaneous returns the node creation time, memory, cpu and UID
@@ -165,7 +164,6 @@ func (nc *NodeController) getNodeMiscellaneous(name string) *NodeMisc {
 
 	nodeMisc := &NodeMisc{}
 
-	nodeMisc.CreationTime = node.CreationTimestamp.Time
 	nodeMisc.Memory = node.Status.Capacity.Memory().Value()
 	nodeMisc.CPU = node.Status.Capacity.Cpu().Value()
 	nodeMisc.UID = string(node.ObjectMeta.UID)
