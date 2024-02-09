@@ -31,6 +31,7 @@ type AppController struct {
 	rSetLister    applister.ReplicaSetLister
 	rSetSynced    cache.InformerSynced
 	appqueue      workqueue.RateLimitingInterface
+	logger        klog.Logger
 }
 
 func NewAppController(
@@ -45,8 +46,6 @@ func NewAppController(
 	sSetInformer := informer.Apps().V1().StatefulSets()
 	rSetInformer := informer.Apps().V1().ReplicaSets()
 
-	logger := klog.FromContext(ctx)
-
 	ac := &AppController{
 		kubeclientset: kubeclientset,
 		dsLister:      dsInformer.Lister(),
@@ -57,7 +56,8 @@ func NewAppController(
 		sSetSynced:    sSetInformer.Informer().HasSynced,
 		rSetLister:    rSetInformer.Lister(),
 		rSetSynced:    rSetInformer.Informer().HasSynced,
-		appqueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Apps")}
+		appqueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Apps"),
+		logger:        klog.FromContext(ctx)}
 
 	_, err := dsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: ac.enqueueApp,
@@ -84,7 +84,7 @@ func NewAppController(
 		},
 	})
 	if err != nil {
-		logger.Error(err, "Klustercost:  unable to fetch apps/v1")
+		ac.logger.Error(err, "Klustercost:  unable to fetch apps/v1")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
@@ -110,11 +110,10 @@ func (ac *AppController) Run(ctx context.Context, workers int) error {
 
 	defer runtime.HandleCrash()
 
-	logger := klog.FromContext(ctx)
-	logger.Info("Klustercost: Starting apps observer threads")
+	ac.logger.Info("Klustercost: Starting apps observer threads")
 
 	// Wait for the caches to be synced before starting workers
-	logger.Info("Waiting for apps informer caches to sync")
+	ac.logger.Info("Waiting for apps informer caches to sync")
 
 	if ok := cache.WaitForCacheSync(ctx.Done(), ac.dsSynced); !ok {
 		return fmt.Errorf("failed to wait for DaemonSet caches to sync")
@@ -128,13 +127,12 @@ func (ac *AppController) Run(ctx context.Context, workers int) error {
 		return fmt.Errorf("failed to wait for StatefulSet caches to sync")
 	}
 
-	logger.Info("Starting workers for apps", "count", workers)
+	ac.logger.Info("Starting workers for apps", "count", workers)
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, ac.runWorker, time.Second)
 	}
 
-	//<-ctx.Done()
-	logger.Info("Done")
+	ac.logger.Info("Done")
 
 	return nil
 }
@@ -146,7 +144,6 @@ func (ac *AppController) runWorker(ctx context.Context) {
 
 func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 	obj, shutdown := ac.appqueue.Get()
-	//logger := klog.FromContext(ctx)
 
 	if shutdown {
 		return false
@@ -177,11 +174,7 @@ func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 		err = postgres.InsertOwner(name, namespace, allRef)
 
 		if err != nil {
-			klog.Error(err)
-		}
-
-		if err != nil {
-			klog.Error(err)
+			ac.logger.Error(err, "Error inserting owner details into the database")
 		}
 
 		if err != nil {

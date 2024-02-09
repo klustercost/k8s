@@ -34,7 +34,6 @@ func NewNodeController(
 	kubeclientset kubernetes.Interface,
 	informer informers.SharedInformerFactory) *NodeController {
 
-	//logger := klog.FromContext(ctx)
 	nodesInformer := informer.Core().V1().Nodes()
 
 	nc := &NodeController{
@@ -152,7 +151,7 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 func (nc *NodeController) getNodeMiscellaneous(name string) *model.NodeMisc {
 	node, err := nc.nodesLister.Get(name)
 	if err != nil {
-		klog.Error(err, "Error getting node lister ")
+		nc.logger.Error(err, "Error getting node lister ")
 	}
 
 	nodeMisc := &model.NodeMisc{}

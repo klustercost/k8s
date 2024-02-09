@@ -27,6 +27,7 @@ type PodController struct {
 	podsSynced    cache.InformerSynced
 	podqueue      workqueue.RateLimitingInterface
 	metrics       metricsv.Clientset
+	logger        klog.Logger
 }
 
 func NewController(
@@ -35,7 +36,6 @@ func NewController(
 	kubeclientset kubernetes.Interface,
 	informer informers.SharedInformerFactory) *PodController {
 
-	logger := klog.FromContext(ctx)
 	podInformer := informer.Core().V1().Pods()
 
 	controller := &PodController{
@@ -43,7 +43,8 @@ func NewController(
 		podsLister:    podInformer.Lister(),
 		podsSynced:    podInformer.Informer().HasSynced,
 		podqueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Pods"),
-		metrics:       *metricsClientset}
+		metrics:       *metricsClientset,
+		logger:        klog.FromContext(ctx)}
 
 	_, err := podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueuePod,
@@ -52,7 +53,7 @@ func NewController(
 		},
 	})
 	if err != nil {
-		logger.Error(err, "Klustercost:  unable to fetch pods")
+		controller.logger.Error(err, "Klustercost:  unable to fetch pods")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
@@ -68,17 +69,16 @@ func (c *PodController) Run(ctx context.Context, workers int) error {
 
 	defer runtime.HandleCrash()
 
-	logger := klog.FromContext(ctx)
-	logger.Info("Klustercost: Starting observer threads")
+	c.logger.Info("Klustercost: Starting observer threads")
 
 	// Wait for the caches to be synced before starting workers
-	logger.Info("Waiting for informer caches to sync")
+	c.logger.Info("Waiting for informer caches to sync")
 
 	if ok := cache.WaitForCacheSync(ctx.Done(), c.podsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	logger.Info("Starting workers for pods", "count", workers)
+	c.logger.Info("Starting workers for pods", "count", workers)
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, c.runWorker, time.Second)
 	}
@@ -93,7 +93,6 @@ func (c *PodController) runWorker(ctx context.Context) {
 
 func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 	obj, shutdown := c.podqueue.Get()
-	logger := klog.FromContext(ctx)
 
 	if shutdown {
 		return false
@@ -119,12 +118,12 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 
 		namespace, name, err := cache.SplitMetaNamespaceKey(key)
 		if err != nil {
-			logger.Error(err, "Invalid resource key: ", key)
+			c.logger.Error(err, "Invalid resource key: ", key)
 		}
 		//Returns the pod and the pod metrics objects
 		pod, err := c.initPodCollector(namespace, name)
 		if err != nil {
-			logger.Error(err, "Unable to init pod collector ")
+			c.logger.Error(err, "Unable to init pod collector ")
 			return nil
 		}
 
@@ -132,7 +131,7 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 			ownerRef := c.returnOwnerReferences(pod)
 			podMisc := c.getPodMiscellaneous(pod)
 			if err != nil {
-				logger.Error(err, "Unable to get pod miscellaneous")
+				c.logger.Error(err, "Unable to get pod miscellaneous")
 				return nil
 			}
 
@@ -142,7 +141,7 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 			err = postgres.InsertPod(name, namespace, podMisc, ownerRef, podUsage)
 
 			if err != nil {
-				logger.Error(err, "Error inserting pod data into the database")
+				c.logger.Error(err, "Error inserting pod data into the database")
 			}
 		}
 
@@ -167,7 +166,7 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 func (c *PodController) initPodCollector(namespace, name string) (*v1.Pod, error) {
 	pod, err := c.podsLister.Pods(namespace).Get(name)
 	if err != nil {
-		klog.Error(err, "Error getting pod lister ")
+		c.logger.Error(err, "Error getting pod lister ")
 	}
 
 	return pod, err
@@ -220,7 +219,7 @@ func (c *PodController) getPodConsumption(namespace, name string) *model.PodCons
 
 	pod, err := c.metrics.MetricsV1beta1().PodMetricses(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
-		klog.Error("Error getting pod metrics ", err)
+		c.logger.Error(err, "Error getting pod metrics ")
 	}
 
 	// Calculate total memory usage for the entire pod

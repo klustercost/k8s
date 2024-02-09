@@ -18,7 +18,7 @@ func init() {
 	var err error
 	db_connection, err = sql.Open("postgres", connectionString)
 	if err != nil {
-		klog.Fatal(err)
+		fmt.Println("Error opening the DB connection:", err)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
@@ -37,7 +37,7 @@ func InsertPod(pod_name, namespace string, podMisc *model.PodMisc, ownerRef *mod
 	_, err := db_connection.Exec("INSERT INTO klustercost.tbl_pods(pod_name, namespace, record_time, used_mem, used_cpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels, node_name)	VALUES($1, $2, $3, $4, $5, NULLIF($6,''), NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), $10, $11, $12)",
 		pod_name, namespace, podMisc.RecordTime, podUsage.Memory, podUsage.CPU, ownerRef.OwnerVersion, ownerRef.OwnerKind, ownerRef.OwnerName, ownerRef.OwnerUid, podMisc.OwnUid, podMisc.Labels, podMisc.NodeName)
 	if err != nil {
-		klog.Error(err)
+		fmt.Println("Error inserting pod details into the database:", err)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		return err
 	}
@@ -51,7 +51,7 @@ func InsertNode(node_name string, nodeMisc *model.NodeMisc) error {
 	_, err := db_connection.Exec("INSERT INTO klustercost.tbl_nodes(node_name, node_mem, node_cpu, node_uid, labels, price_per_hour) VALUES($1, $2, $3, $4, $5, NULLIF($6,''))",
 		node_name, nodeMisc.Memory, nodeMisc.CPU, nodeMisc.UID, nodeMisc.Labels, "")
 	if err != nil {
-		klog.Error(err)
+		fmt.Println("Error inserting node details into the database:", err)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		return err
 	}
@@ -66,7 +66,7 @@ func InsertOwner(name string, namespace string, allRef *model.AppOwnerReferences
 	_, err := db_connection.Exec("INSERT INTO klustercost.tbl_owners(name, namespace, record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels) VALUES($1, $2, $3, $4, $5, $6, NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), NULLIF($10,''), NULLIF($11,''))",
 		name, namespace, allRef.RecordTime, allRef.OwnVersion, allRef.OwnKind, allRef.OwnerUid, allRef.OwnerVersion, allRef.OwnKind, allRef.OwnerName, allRef.OwnerUid, allRef.Labels)
 	if err != nil {
-		klog.Error(err)
+		fmt.Println("Error inserting owner details into the database:", err)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		return err
 	}
