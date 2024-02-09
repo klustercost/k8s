@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"klustercost/monitor/pkg/model"
 	"klustercost/monitor/pkg/postgres"
 	"time"
 
@@ -30,6 +31,7 @@ type AppController struct {
 	rSetLister    applister.ReplicaSetLister
 	rSetSynced    cache.InformerSynced
 	appqueue      workqueue.RateLimitingInterface
+	logger        klog.Logger
 }
 
 func NewAppController(
@@ -44,8 +46,6 @@ func NewAppController(
 	sSetInformer := informer.Apps().V1().StatefulSets()
 	rSetInformer := informer.Apps().V1().ReplicaSets()
 
-	logger := klog.FromContext(ctx)
-
 	ac := &AppController{
 		kubeclientset: kubeclientset,
 		dsLister:      dsInformer.Lister(),
@@ -56,34 +56,35 @@ func NewAppController(
 		sSetSynced:    sSetInformer.Informer().HasSynced,
 		rSetLister:    rSetInformer.Lister(),
 		rSetSynced:    rSetInformer.Informer().HasSynced,
-		appqueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Apps")}
+		appqueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Apps"),
+		logger:        klog.FromContext(ctx)}
 
 	_, err := dsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: ac.enqueueApp,
+		//AddFunc: ac.enqueueApp,
 		UpdateFunc: func(old, new interface{}) {
 			ac.enqueueApp(new)
 		},
 	})
 	_, err = deployInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: ac.enqueueApp,
+		//AddFunc: ac.enqueueApp,
 		UpdateFunc: func(old, new interface{}) {
 			ac.enqueueApp(new)
 		},
 	})
 	_, err = sSetInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: ac.enqueueApp,
+		//AddFunc: ac.enqueueApp,
 		UpdateFunc: func(old, new interface{}) {
 			ac.enqueueApp(new)
 		},
 	})
 	_, err = rSetInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: ac.enqueueApp,
+		//AddFunc: ac.enqueueApp,
 		UpdateFunc: func(old, new interface{}) {
 			ac.enqueueApp(new)
 		},
 	})
 	if err != nil {
-		logger.Error(err, "Klustercost:  unable to fetch apps/v1")
+		ac.logger.Error(err, "Klustercost:  unable to fetch apps/v1")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
@@ -109,11 +110,10 @@ func (ac *AppController) Run(ctx context.Context, workers int) error {
 
 	defer runtime.HandleCrash()
 
-	logger := klog.FromContext(ctx)
-	logger.Info("Klustercost: Starting apps observer threads")
+	ac.logger.Info("Klustercost: Starting apps observer threads")
 
 	// Wait for the caches to be synced before starting workers
-	logger.Info("Waiting for apps informer caches to sync")
+	ac.logger.Info("Waiting for apps informer caches to sync")
 
 	if ok := cache.WaitForCacheSync(ctx.Done(), ac.dsSynced); !ok {
 		return fmt.Errorf("failed to wait for DaemonSet caches to sync")
@@ -127,13 +127,12 @@ func (ac *AppController) Run(ctx context.Context, workers int) error {
 		return fmt.Errorf("failed to wait for StatefulSet caches to sync")
 	}
 
-	logger.Info("Starting workers for apps", "count", workers)
+	ac.logger.Info("Starting workers for apps", "count", workers)
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, ac.runWorker, time.Second)
 	}
 
-	//<-ctx.Done()
-	logger.Info("Done")
+	ac.logger.Info("Done")
 
 	return nil
 }
@@ -145,7 +144,6 @@ func (ac *AppController) runWorker(ctx context.Context) {
 
 func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 	obj, shutdown := ac.appqueue.Get()
-	//logger := klog.FromContext(ctx)
 
 	if shutdown {
 		return false
@@ -171,14 +169,12 @@ func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 
 		namespace, name, err := cache.SplitMetaNamespaceKey(key)
 		allRef := ac.returnOwnerReferences(namespace, name)
-		err = postgres.InsertOwner(name, namespace, allRef.RecordTime, allRef.OwnVersion, allRef.OwnKind, allRef.OwnUid, allRef.OwnerVersion, allRef.OwnerKind, allRef.OwnerName, allRef.OwnerUid, allRef.Labels)
+
+		//Insert the owner details into the database
+		err = postgres.InsertOwner(name, namespace, allRef)
 
 		if err != nil {
-			klog.Error(err)
-		}
-
-		if err != nil {
-			klog.Error(err)
+			ac.logger.Error(err, "Error inserting owner details into the database")
 		}
 
 		if err != nil {
@@ -199,9 +195,9 @@ func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 }
 
 // Returns owner_version, owner_kind, owner_name, owner_uid
-func ownerReferences(owner []metav1.OwnerReference) *OwnerReferences {
+func ownerReferences(owner []metav1.OwnerReference) *model.OwnerReferences {
 
-	ownerRef := &OwnerReferences{}
+	ownerRef := &model.OwnerReferences{}
 
 	for _, v := range owner {
 		if v.Name != "" {
@@ -215,21 +211,8 @@ func ownerReferences(owner []metav1.OwnerReference) *OwnerReferences {
 }
 
 // record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels
-type AppOwnerReferences struct {
-	RecordTime   time.Time
-	OwnVersion   string
-	OwnKind      string
-	OwnUid       string
-	OwnerVersion string
-	OwnerKind    string
-	OwnerName    string
-	OwnerUid     string
-	Labels       string
-}
-
-// record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels
-func (ac *AppController) returnOwnerReferences(namespace, name string) *AppOwnerReferences {
-	appOwnerReference := &AppOwnerReferences{}
+func (ac *AppController) returnOwnerReferences(namespace, name string) *model.AppOwnerReferences {
+	appOwnerReference := &model.AppOwnerReferences{}
 	//record_time is the time when the function is run
 	//It is used as a timestamp for the time when data was insterted in the database
 	recordTime := time.Now()
@@ -256,8 +239,8 @@ func (ac *AppController) returnOwnerReferences(namespace, name string) *AppOwner
 	return nil
 }
 
-func defineOwnerDetails[T metav1.Object](k8sObj T, recordTime time.Time, kind string) *AppOwnerReferences {
-	appOwnerReference := &AppOwnerReferences{}
+func defineOwnerDetails[T metav1.Object](k8sObj T, recordTime time.Time, kind string) *model.AppOwnerReferences {
+	appOwnerReference := &model.AppOwnerReferences{}
 
 	owner := k8sObj.GetOwnerReferences()
 	ownerRef := ownerReferences(owner)

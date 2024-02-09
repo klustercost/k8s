@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"klustercost/monitor/pkg/model"
 	"klustercost/monitor/pkg/postgres"
 	"strings"
 	"time"
@@ -24,6 +25,7 @@ type NodeController struct {
 	nodesLister   corelisters.NodeLister
 	nodesSynced   cache.InformerSynced
 	nodequeue     workqueue.RateLimitingInterface
+	logger        klog.Logger
 }
 
 func NewNodeController(
@@ -32,23 +34,23 @@ func NewNodeController(
 	kubeclientset kubernetes.Interface,
 	informer informers.SharedInformerFactory) *NodeController {
 
-	logger := klog.FromContext(ctx)
 	nodesInformer := informer.Core().V1().Nodes()
 
 	nc := &NodeController{
 		kubeclientset: kubeclientset,
 		nodesLister:   nodesInformer.Lister(),
 		nodesSynced:   nodesInformer.Informer().HasSynced,
-		nodequeue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Nodes")}
+		nodequeue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Nodes"),
+		logger:        klog.FromContext(ctx)}
 
 	_, err := nodesInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: nc.enqueueNode,
+		//AddFunc: nc.enqueueNode,
 		UpdateFunc: func(old, new interface{}) {
 			nc.enqueueNode(new)
 		},
 	})
 	if err != nil {
-		logger.Error(err, "Klustercost:  unable to fetch nodes")
+		nc.logger.Error(err, "Klustercost:  unable to fetch nodes")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
@@ -64,23 +66,22 @@ func (nc *NodeController) Run(ctx context.Context, workers int) error {
 
 	defer runtime.HandleCrash()
 
-	logger := klog.FromContext(ctx)
-	logger.Info("Klustercost: Starting node observer threads")
+	nc.logger.Info("Klustercost: Starting node observer threads")
 
 	// Wait for the caches to be synced before starting workers
-	logger.Info("Waiting for node informer caches to sync")
+	nc.logger.Info("Waiting for node informer caches to sync")
 
 	if ok := cache.WaitForCacheSync(ctx.Done(), nc.nodesSynced); !ok {
 		return fmt.Errorf("failed to wait for node caches to sync")
 	}
 
-	logger.Info("Starting workers for nodes", "count", workers)
+	nc.logger.Info("Starting workers for nodes", "count", workers)
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, nc.runWorker, time.Second)
 	}
 
 	//<-ctx.Done()
-	logger.Info("Done")
+	nc.logger.Info("Done")
 
 	return nil
 }
@@ -94,7 +95,6 @@ func (nc *NodeController) runWorker(ctx context.Context) {
 // processNextWorkItem processes items from the workqueue
 func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 	obj, shutdown := nc.nodequeue.Get()
-	//logger := klog.FromContext(ctx)
 
 	if shutdown {
 		return false
@@ -119,15 +119,16 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 		}
 		nodeName, err := cache.ParseObjectName(key)
 		if err != nil {
-			klog.Error(err)
+			nc.logger.Error(err, "Error parsing object name")
 		}
 
 		nodeMisc := nc.getNodeMiscellaneous(nodeName.Name)
 		if err != nil {
-			klog.Error("Unable to init pod collector ", err)
+			nc.logger.Error(err, "Unable to init pod collector ")
 			return nil
 		}
-		err = postgres.InsertNode(nodeName.Name, nodeMisc.CreationTime, nodeMisc.Memory, nodeMisc.CPU, nodeMisc.UID, nodeMisc.Labels)
+
+		err = postgres.InsertNode(nodeName.Name, nodeMisc)
 
 		if err != nil {
 			nc.nodequeue.Forget(obj)
@@ -146,26 +147,15 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
-// NodeMisc is a struct that contains the node miscellaneous information
-// It is used to insert data into the database
-type NodeMisc struct {
-	CreationTime time.Time
-	Memory       int64
-	CPU          int64
-	UID          string
-	Labels       string
-}
-
 // getNodeMiscellaneous returns the node creation time, memory, cpu and UID
-func (nc *NodeController) getNodeMiscellaneous(name string) *NodeMisc {
+func (nc *NodeController) getNodeMiscellaneous(name string) *model.NodeMisc {
 	node, err := nc.nodesLister.Get(name)
 	if err != nil {
-		klog.Error("Error getting node lister ", err)
+		nc.logger.Error(err, "Error getting node lister ")
 	}
 
-	nodeMisc := &NodeMisc{}
+	nodeMisc := &model.NodeMisc{}
 
-	nodeMisc.CreationTime = node.CreationTimestamp.Time
 	nodeMisc.Memory = node.Status.Capacity.Memory().Value()
 	nodeMisc.CPU = node.Status.Capacity.Cpu().Value()
 	nodeMisc.UID = string(node.ObjectMeta.UID)
