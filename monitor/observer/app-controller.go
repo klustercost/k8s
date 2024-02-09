@@ -60,25 +60,25 @@ func NewAppController(
 		logger:        klog.FromContext(ctx)}
 
 	_, err := dsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: ac.enqueueApp,
+		//AddFunc: ac.enqueueApp,
 		UpdateFunc: func(old, new interface{}) {
 			ac.enqueueApp(new)
 		},
 	})
 	_, err = deployInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: ac.enqueueApp,
+		//AddFunc: ac.enqueueApp,
 		UpdateFunc: func(old, new interface{}) {
 			ac.enqueueApp(new)
 		},
 	})
 	_, err = sSetInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: ac.enqueueApp,
+		//AddFunc: ac.enqueueApp,
 		UpdateFunc: func(old, new interface{}) {
 			ac.enqueueApp(new)
 		},
 	})
 	_, err = rSetInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: ac.enqueueApp,
+		//AddFunc: ac.enqueueApp,
 		UpdateFunc: func(old, new interface{}) {
 			ac.enqueueApp(new)
 		},

@@ -44,7 +44,7 @@ func NewNodeController(
 		logger:        klog.FromContext(ctx)}
 
 	_, err := nodesInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: nc.enqueueNode,
+		//AddFunc: nc.enqueueNode,
 		UpdateFunc: func(old, new interface{}) {
 			nc.enqueueNode(new)
 		},

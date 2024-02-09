@@ -47,7 +47,7 @@ func NewController(
 		logger:        klog.FromContext(ctx)}
 
 	_, err := podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: controller.enqueuePod,
+		//AddFunc: controller.enqueuePod,
 		UpdateFunc: func(old, new interface{}) {
 			controller.enqueuePod(new)
 		},
