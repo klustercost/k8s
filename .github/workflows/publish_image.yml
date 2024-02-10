@@ -13,14 +13,13 @@ on:
 # Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: klustercost-price
+  IMAGE_NAME: yalosvoios/klustercost-price
 
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
     # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
     permissions:
-      contents: read
       packages: write
     steps:
       - name: Checkout repository
@@ -41,5 +40,5 @@ jobs:
         with:
           context: price
           push: true
-          tags: klustercost-price:latest
+          tags: latest
           labels: ${{ steps.meta.outputs.labels }}
