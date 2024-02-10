@@ -1,4 +1,5 @@
 from flask import Flask
+from flask import request
 import json
 import logging
 import azure
@@ -37,7 +38,15 @@ app = Flask(__name__)
 @app.route('/get')
 def get():
     try:
-        return json.dumps(get_api().query("armRegionName eq 'southcentralus' and armSkuName eq 'Standard_NP20s' and priceType eq 'Consumption' and contains(meterName, 'Spot')"))
+        region = request.args.get('region')
+        sku = request.args.get('sku')
+
+        if not region:
+            raise Exception("Missing region")
+        if not sku:
+            raise Exception("Missing sky")
+
+        return json.dumps(get_api().query(f"armRegionName eq '{region}' and armSkuName eq '{sku}' and priceType eq 'Consumption' and contains(meterName, 'Spot')"))
     except Exception as Ex:
         return str(Ex)
 
