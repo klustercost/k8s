@@ -40,5 +40,5 @@ jobs:
         with:
           context: price
           push: true
-          tags: ghcr.io/yalosvoios/klustercost-price:latest
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}:latest
           labels: ${{ steps.meta.outputs.labels }}
