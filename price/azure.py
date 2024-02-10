@@ -19,7 +19,7 @@ class price_api:
             table_data.append([item['armSkuName'], item['retailPrice'], item['unitOfMeasure'], item['armRegionName'], meter, item['productName']])
         return table_data
 
-    def query(self,query):
-        response = requests.get(self.__form_api(),params={'$filter': query})
+    def query(self,region, sku):
+        response = requests.get(self.__form_api(),params={'$filter': f"armRegionName eq '{region}' and armSkuName eq '{sku}' and priceType eq 'Consumption' and contains(meterName, 'Spot')"})
         self.json_data = json.loads(response.text)
         return self.__structure_data()

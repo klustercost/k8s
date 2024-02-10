@@ -46,7 +46,7 @@ def get():
         if not sku:
             raise Exception("Missing sky")
 
-        return json.dumps(get_api().query(f"armRegionName eq '{region}' and armSkuName eq '{sku}' and priceType eq 'Consumption' and contains(meterName, 'Spot')"))
+        return json.dumps(get_api().query(region, sku))
     except Exception as Ex:
         return str(Ex)
 
