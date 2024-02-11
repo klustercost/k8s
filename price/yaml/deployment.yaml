@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: klustercost-price
-          image: ghcr.io/yalosvoios/klustercost-price:latest
+          image: ghcr.io/yalosvoios/klustercost/klustercost-price:latest
           env:
             - name: PROVIDER
               value: "azure"          
