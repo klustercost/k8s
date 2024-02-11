@@ -40,13 +40,14 @@ def get():
     try:
         region = request.args.get('region')
         sku = request.args.get('sku')
+        os = request.args.get('os')
 
         if not region:
             raise Exception("Missing region")
         if not sku:
             raise Exception("Missing sky")
 
-        return json.dumps(get_api().query(region, sku))
+        return json.dumps(get_api().query(region, sku, os))
     except Exception as Ex:
         return str(Ex)
 
