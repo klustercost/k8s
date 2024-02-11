@@ -131,9 +131,7 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 			return nil
 		}
 		pg := postgres.PG{}
-		a = &pg
-
-		err = persistence.InsertNode(a, nodeName.Name, nodeMisc)
+		err = persistence.InsertNode(pg.Persistence, nodeName.Name, nodeMisc)
 
 		if err != nil {
 			nc.nodequeue.Forget(obj)

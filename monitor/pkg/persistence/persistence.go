@@ -7,8 +7,11 @@ type Persistence interface {
 }
 
 // PostgresDB is a struct that defines the fact that the medium for storage is a Postgres database
-type PostgresDB struct{}
+type PostgresDB struct {
+	Persistence
+}
 
+// InsertNode is a function that inserts the details of a node into the database
 func InsertNode(p Persistence, nodeName string, nodeMisc *model.NodeMisc) error {
 	return p.InsertNode(nodeName, nodeMisc)
 }
