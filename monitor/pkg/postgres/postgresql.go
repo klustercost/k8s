@@ -5,10 +5,15 @@ import (
 	"fmt"
 	"klustercost/monitor/pkg/env"
 	"klustercost/monitor/pkg/model"
+	"klustercost/monitor/pkg/persistence"
 
 	_ "github.com/lib/pq"
 	"k8s.io/klog/v2"
 )
+
+type PG struct {
+	*persistence.PostgresDB
+}
 
 var db_connection *sql.DB = nil
 
@@ -47,7 +52,7 @@ func InsertPod(pod_name, namespace string, podMisc *model.PodMisc, ownerRef *mod
 
 // This function inserts the details of a node into the database
 // price_per_hour to be added to the function argument and to the query once it is actually defined
-func InsertNode(node_name string, nodeMisc *model.NodeMisc) error {
+func (pg *PG) InsertNode(node_name string, nodeMisc *model.NodeMisc) error {
 	_, err := db_connection.Exec("INSERT INTO klustercost.tbl_nodes(node_name, node_mem, node_cpu, node_uid, labels, price_per_hour) VALUES($1, $2, $3, $4, $5, NULLIF($6,''))",
 		node_name, nodeMisc.Memory, nodeMisc.CPU, nodeMisc.UID, nodeMisc.Labels, "")
 	if err != nil {
