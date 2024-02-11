@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: klustercost-update
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: klustercost-update
+  template:
+    metadata:
+      labels:
+        app: klustercost-update
+    spec:
+      containers:
+        - name: klustercost-update
+          image: ghcr.io/yalosvoios/klustercost-update:latest
+          env:
+            - name: price-server
+              value: "klustercost-price"
+            #db from here
+            - name: host
+              value: "klustercost-postgres-service"
+            - name: database
+              value: "klustercost"
+            - name: user
+              value: "postgres"
+            - name: password
+              value: "postgres"
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1024Mi
+            requests:
+              cpu: "0.05"
+              memory: 1024Mi
