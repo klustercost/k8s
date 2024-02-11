@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: klustercost-update
-          image: ghcr.io/yalosvoios/klustercost-update:latest
+          image: ghcr.io/yalosvoios/klustercost/klustercost-update:latest
           env:
             - name: price-server
               value: "klustercost-price"
