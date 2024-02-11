@@ -3,6 +3,7 @@ import os
 import psycopg2
 import urllib.request
 import json
+import time
 
 class operate_db:
     __cache = {}
@@ -63,4 +64,6 @@ if __name__ == "__main__":
     logging.info('This is the klustercost price updater')
 
     operate_db = operate_db()
-    operate_db.get_work_items()
+    while True:
+        operate_db.get_work_items()
+        time.sleep(10)
