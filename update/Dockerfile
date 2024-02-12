@@ -7,7 +7,10 @@ COPY *.py ./
 COPY requirements.txt ./
 
 RUN pip3 install --upgrade pip
-RUN pip install -r ./requirements.txt
+
+RUN apt-get update \
+    && apt-get -y install libpq-dev \
+    && pip install psycopg2
 
 ## Build
 FROM gcr.io/distroless/python3-debian12:latest
