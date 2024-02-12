@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-update
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-update
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-update
+    spec:
+      containers:
+        - name: klustercost-update
+          image: {{ .Values.update.image }}
+          env:
+            - name: price-server
+              value: "klustercost-price"
+            #db from here
+            - name: host
+              value: {{ .Release.Name }}-postgres-service.{{ .Release.Namespace }}.svc.cluster.local
+            - name: database
+              value: {{ .Values.postgresql.name }}
+            - name: user
+              value: {{ .Values.postgresql.username }}
+            - name: password
+              value: {{ .Values.postgresql.password }}
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1024Mi
+            requests:
+              cpu: "0.05"
+              memory: 256Mi

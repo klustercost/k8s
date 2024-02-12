@@ -14,16 +14,16 @@ spec:
     spec:
       containers:
         - name: {{ .Release.Name }}-price
-          image: ghcr.io/yalosvoios/klustercost-price:latest
+          image: {{ .Values.price.image }}
           env:
             - name: PROVIDER
-              value: "azure"          
+              value: {{ .Values.price.provider }}      
           resources:
             limits:
               cpu: "1"
-              memory: 1024Mi
+              memory: 512Mi
             requests:
               cpu: "0.05"
-              memory: 1024Mi
+              memory: 256Mi
           ports:
           - containerPort: 5001
