@@ -9,4 +9,7 @@ COPY requirements.txt ./
 RUN pip3 install --upgrade pip
 RUN pip install -r ./requirements.txt
 
-CMD ["main.py"]
+# Make main.py executable
+RUN chmod +x main.py
+
+CMD ["python", "./main.py"]
