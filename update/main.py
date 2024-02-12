@@ -47,7 +47,7 @@ class operate_db:
         return self.__cache[labels]
 
     def query_provider(self,node_data) -> float:
-        request = f"http://{self.price_uri}/get?region={node_data["topology.kubernetes.io/region"]}&sku={node_data["node.kubernetes.io/instance-type"]}&os={node_data["kubernetes.io/os"]}"
+        request = f"http://{self.price_uri}/get?region={node_data['topology.kubernetes.io/region']}&sku={node_data['node.kubernetes.io/instance-type']}&os={node_data['kubernetes.io/os']}"
         logging.info(request)
         var = json.loads(urllib.request.urlopen(request).read().decode("utf-8"))
         return var[0][1]
