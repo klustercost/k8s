@@ -27,6 +27,8 @@ spec:
               value: {{ .Values.postgresql.username }}
             - name: password
               value: {{ .Values.postgresql.password }}
+            - name: port
+              value: "{{ printf "%v" .Values.postgresql.port }}"
           resources:
             limits:
               cpu: "1"
