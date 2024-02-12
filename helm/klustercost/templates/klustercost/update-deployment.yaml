@@ -16,8 +16,8 @@ spec:
         - name: klustercost-update
           image: {{ .Values.update.image }}
           env:
-            - name: price-server
-              value: "klustercost-price"
+            - name: price_uri
+              value: {{ .Release.Name }}-price.{{ .Release.Namespace }}.svc.cluster.local
             #db from here
             - name: host
               value: {{ .Release.Name }}-postgres-service.{{ .Release.Namespace }}.svc.cluster.local
