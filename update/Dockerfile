@@ -1,13 +1,10 @@
 ## Build
-FROM python:3.12-bullseye  AS build
+FROM python:3.12-bookworm AS build
 
 WORKDIR /app
 
 COPY *.py ./
 COPY requirements.txt ./
-
-RUN apt-get update && apt-get install
-RUN apt-get install -y libpq-dev
 
 RUN pip3 install --upgrade pip
 RUN pip install -r ./requirements.txt
