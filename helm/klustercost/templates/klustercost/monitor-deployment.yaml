@@ -29,14 +29,14 @@ spec:
             - name: PG_DB_HOST
               value: {{ .Release.Name }}-postgres-service.{{ .Release.Namespace }}.svc.cluster.local
             - name: PG_DB_PORT
-              value: '5432'
+              value: "{{ printf "%v" .Values.postgresql.port }}"
           resources:
             limits:
               cpu: '1'
               memory: 1Gi
             requests:
               cpu: 50m
-              memory: 1Gi
+              memory: 256Mi
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           imagePullPolicy: IfNotPresent

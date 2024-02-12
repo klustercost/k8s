@@ -5,3 +5,4 @@ database=klustercost
 user=postgres
 password=postgres
 price_uri=127.0.0.1:5001
+port=5432

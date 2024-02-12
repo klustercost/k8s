@@ -16,7 +16,8 @@ class operate_db:
                 host=os.environ['host'],
                 database=os.environ['database'],
                 user=os.environ['user'],
-                password=os.environ['password']
+                password=os.environ['password'],
+                port=os.environ['port']
             )
         except KeyError as Ex:
             raise Exception(f"missing an environment variable: {Ex.args[0]}")

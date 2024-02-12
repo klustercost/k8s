@@ -8,6 +8,7 @@ postgresql:
   name: klustercost
   username: klustercost
   password: klustercost
+  port: 5432
   pvc:
     enabled: false
     size: 1Gi
