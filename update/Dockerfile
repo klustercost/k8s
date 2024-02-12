@@ -9,6 +9,4 @@ COPY requirements.txt ./
 RUN pip3 install --upgrade pip
 RUN pip install -r ./requirements.txt
 
-USER nonroot:nonroot
-
 CMD ["main.py"]
