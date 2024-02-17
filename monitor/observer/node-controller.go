@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"klustercost/monitor/pkg/model"
 	"klustercost/monitor/pkg/persistence"
-	"klustercost/monitor/pkg/postgres"
 	"strings"
 	"time"
 
@@ -20,8 +19,6 @@ import (
 	"k8s.io/klog/v2"
 	metricsv "k8s.io/metrics/pkg/client/clientset/versioned"
 )
-
-var a persistence.Persistence
 
 type NodeController struct {
 	kubeclientset kubernetes.Interface
@@ -130,10 +127,8 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 			nc.logger.Error(err, "Unable to init pod collector ")
 			return nil
 		}
-		pg := postgres.PG{}
-		a = &pg
 
-		err = persistence.InsertNode(a, nodeName.Name, nodeMisc)
+		err = persistence.GetPersistInterface().InsertNode(nodeName.Name, nodeMisc)
 
 		if err != nil {
 			nc.nodequeue.Forget(obj)

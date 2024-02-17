@@ -5,35 +5,41 @@ import (
 	"fmt"
 	"klustercost/monitor/pkg/env"
 	"klustercost/monitor/pkg/model"
-	"klustercost/monitor/pkg/persistence"
 
 	_ "github.com/lib/pq"
 	"k8s.io/klog/v2"
 )
 
-type PG struct {
-	*persistence.PostgresDB
+type persistence_pg struct {
+	db_connection *sql.DB
 }
 
-var db_connection *sql.DB = nil
-
-func init() {
-	env := env.NewConfiguration()
-	connectionString := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable", env.PgDbUser, env.PgDbPass, env.PgDbName, env.PgDbHost, env.PgDbPort)
-	var err error
-	db_connection, err = sql.Open("postgres", connectionString)
-	if err != nil {
-		fmt.Println("Error opening the DB connection:", err)
-		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-	}
-
-}
+var persistence_impl *persistence_pg = nil
 
 // Closes the connection to the DB.
-func Close() {
-	if db_connection != nil {
-		db_connection.Close()
+func ClosePersistInterface() {
+	if persistence_impl != nil {
+		persistence_impl.Close()
 	}
+}
+
+func GetPersistInterface() interface{} {
+	if persistence_impl == nil {
+		env := env.NewConfiguration()
+		connectionString := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable", env.PgDbUser, env.PgDbPass, env.PgDbName, env.PgDbHost, env.PgDbPort)
+		db_connection, err := sql.Open("postgres", connectionString)
+		if err != nil {
+			fmt.Println("Error opening the DB connection:", err)
+			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+		}
+		persistence_impl = &persistence_pg{db_connection}
+	}
+
+	return persistence_impl
+}
+
+func (pg *persistence_pg) Close() {
+	persistence_impl.db_connection.Close()
 }
 
 // This function inserts the details of a pod into the database
@@ -52,8 +58,8 @@ func InsertPod(pod_name, namespace string, podMisc *model.PodMisc, ownerRef *mod
 
 // This function inserts the details of a node into the database
 // price_per_hour to be added to the function argument and to the query once it is actually defined
-func (pg *PG) InsertNode(node_name string, nodeMisc *model.NodeMisc) error {
-	_, err := db_connection.Exec("INSERT INTO klustercost.tbl_nodes(node_name, node_mem, node_cpu, node_uid, labels, price_per_hour) VALUES($1, $2, $3, $4, $5, NULLIF($6,''))",
+func (pg *persistence_pg) InsertNode(node_name string, nodeMisc *model.NodeMisc) error {
+	_, err := pg.db_connection.Exec("INSERT INTO klustercost.tbl_nodes(node_name, node_mem, node_cpu, node_uid, labels, price_per_hour) VALUES($1, $2, $3, $4, $5, NULLIF($6,''))",
 		node_name, nodeMisc.Memory, nodeMisc.CPU, nodeMisc.UID, nodeMisc.Labels, "")
 	if err != nil {
 		fmt.Println("Error inserting node details into the database:", err)

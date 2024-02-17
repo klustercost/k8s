@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"klustercost/monitor/pkg/env"
-	"klustercost/monitor/pkg/postgres"
 	"klustercost/monitor/pkg/signals"
 	"klustercost/monitor/pkg/version"
 
@@ -87,4 +86,5 @@ func main() {
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 	<-ctx.Done()
+	persistence.Close()
 }
