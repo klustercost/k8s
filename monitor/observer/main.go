@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"klustercost/monitor/pkg/env"
-	"klustercost/monitor/pkg/postgres"
+	"klustercost/monitor/pkg/persistence"
 	"klustercost/monitor/pkg/signals"
 	"klustercost/monitor/pkg/version"
 
@@ -44,7 +44,7 @@ func main() {
 	logger := klog.FromContext(ctx)
 	logger.Info("Klustercost [Observer]", "v", version.Version)
 
-	defer postgres.Close()
+	defer persistence.Close()
 
 	config, err := get_config(logger)
 	if err != nil {

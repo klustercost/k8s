@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"klustercost/monitor/pkg/model"
-	"klustercost/monitor/pkg/postgres"
+	"klustercost/monitor/pkg/persistence"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -171,7 +171,7 @@ func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 		allRef := ac.returnOwnerReferences(namespace, name)
 
 		//Insert the owner details into the database
-		err = postgres.InsertOwner(name, namespace, allRef)
+		err = persistence.GetPersistInterface().InsertOwner(name, namespace, allRef)
 
 		if err != nil {
 			ac.logger.Error(err, "Error inserting owner details into the database")

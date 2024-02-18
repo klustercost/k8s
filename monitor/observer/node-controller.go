@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"klustercost/monitor/pkg/model"
-	"klustercost/monitor/pkg/postgres"
+	"klustercost/monitor/pkg/persistence"
 	"strings"
 	"time"
 
@@ -128,7 +128,7 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 			return nil
 		}
 
-		err = postgres.InsertNode(nodeName.Name, nodeMisc)
+		err = persistence.GetPersistInterface().InsertNode(nodeName.Name, nodeMisc)
 
 		if err != nil {
 			nc.nodequeue.Forget(obj)

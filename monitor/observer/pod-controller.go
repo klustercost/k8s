@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"klustercost/monitor/pkg/model"
-	"klustercost/monitor/pkg/postgres"
+	"klustercost/monitor/pkg/persistence"
 	"strings"
 	"time"
 
@@ -138,7 +138,7 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 			//Returns the memory and CPU usage of the pod
 			podUsage := c.getPodConsumption(namespace, name)
 
-			err = postgres.InsertPod(name, namespace, podMisc, ownerRef, podUsage)
+			err = persistence.GetPersistInterface().InsertPod(name, namespace, podMisc, ownerRef, podUsage)
 
 			if err != nil {
 				c.logger.Error(err, "Error inserting pod data into the database")
