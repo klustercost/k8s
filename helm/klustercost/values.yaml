@@ -16,13 +16,13 @@ postgresql:
   serviceType: ClusterIP
 
 monitor:
-  image: ghcr.io/yalosvoios/klustercost/klustercost-monitor:latest
+  image: ghcr.io/klustercost/k8s/klustercost-monitor:latest
   resyncTime: 300
   workers: 3
 
 price:
-  image: ghcr.io/yalosvoios/klustercost/klustercost-price:latest
+  image: ghcr.io/klustercost/k8s/klustercost-price:latest
   provider: "azure"
 
 update:
-  image: ghcr.io/yalosvoios/klustercost/klustercost-update:latest
+  image: ghcr.io/klustercost/k8s/klustercost-update:latest
