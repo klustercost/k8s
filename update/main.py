@@ -4,6 +4,8 @@ import psycopg2
 import urllib.request
 import json
 import time
+import signal
+import sys
 
 class operate_db:
     __cache = {}
@@ -60,9 +62,15 @@ class operate_db:
         except psycopg2.DatabaseError as error:
             logging.error(error)        
 
+def signal_handler(sig, frame):
+    logging.info('Leaving')
+    sys.exit(0)
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     logging.info('This is the klustercost price updater')
+
+    signal.signal(signal.SIGINT, signal_handler)
 
     operate_db = operate_db()
     while True:
