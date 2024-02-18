@@ -59,7 +59,7 @@ class operate_db:
             var = json.loads(urllib.request.urlopen(request).read().decode("utf-8"))
             return var[0][1]
         except (KeyError, IndexError) as Ex:
-            logging.error(f'Error: no data for: region={node_data['topology.kubernetes.io/region']}&sku={node_data['node.kubernetes.io/instance-type']}&os={node_data['kubernetes.io/os']}') 
+            logging.error(f"Error: no data for: region={node_data['topology.kubernetes.io/region']}&sku={node_data['node.kubernetes.io/instance-type']}&os={node_data['kubernetes.io/os']}") 
 
     def set_work_item(self, idx, price) -> None:
         logging.debug(f'Setting at {idx} cost of {price}')        
