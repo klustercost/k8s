@@ -45,15 +45,21 @@ class operate_db:
                 key_val = token.split('=')
                 node_data[key_val[0]] = key_val[1]
             val = self.query_provider(node_data)
-            self.__cache[labels] = val
+            if val:
+                self.__cache[labels] = val
+            else:
+                return val
 
         return self.__cache[labels]
 
     def query_provider(self,node_data) -> float:
-        request = f"http://{self.price_uri}/get?region={node_data['topology.kubernetes.io/region']}&sku={node_data['node.kubernetes.io/instance-type']}&os={node_data['kubernetes.io/os']}"
-        logging.info(request)
-        var = json.loads(urllib.request.urlopen(request).read().decode("utf-8"))
-        return var[0][1]
+        try:               
+            request = f"http://{self.price_uri}/get?region={node_data['topology.kubernetes.io/region']}&sku={node_data['node.kubernetes.io/instance-type']}&os={node_data['kubernetes.io/os']}"
+            logging.info(request)
+            var = json.loads(urllib.request.urlopen(request).read().decode("utf-8"))
+            return var[0][1]
+        except (KeyError, IndexError) as Ex:
+            logging.error(f'Error: no data for: region={node_data['topology.kubernetes.io/region']}&sku={node_data['node.kubernetes.io/instance-type']}&os={node_data['kubernetes.io/os']}') 
 
     def set_work_item(self, idx, price) -> None:
         logging.debug(f'Setting at {idx} cost of {price}')        
