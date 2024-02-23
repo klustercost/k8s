@@ -116,14 +116,41 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 			return nil
 		}
 
-		if err := c.syncHandler(ctx, key); err != nil {
-			// Put the item back on the workqueue to handle any transient errors.
-			c.podqueue.AddRateLimited(key)
-			return fmt.Errorf("error syncing '%s': %s, requeuing", key, err.Error())
+		namespace, name, err := cache.SplitMetaNamespaceKey(key)
+		if err != nil {
+			runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+			return nil
+		}
+
+		//Returns the pod and the pod metrics objects
+		pod, err := c.initPodCollector(namespace, name)
+		if err != nil {
+			c.logger.Error(err, "Unable to init pod collector ")
+			return nil
+		}
+
+		if pod.Status.Phase == v1.PodRunning {
+			ownerRef := c.returnOwnerReferences(pod)
+			podMisc := c.getPodMiscellaneous(pod)
+			if err != nil {
+				c.logger.Error(err, "Unable to get pod miscellaneous")
+				return nil
+			}
+
+			//Returns the memory and CPU usage of the pod
+			podUsage := c.getPodConsumption(namespace, name)
+
+			err = persistence.GetPersistInterface().InsertPod(name, namespace, podMisc, ownerRef, podUsage)
+
+			if err != nil {
+				c.podqueue.AddRateLimited(obj)
+				runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+				return nil
+			}
 		}
 
 		c.podqueue.Forget(obj)
-		c.logger.Info("Successfully synced", "resourceName", key)
+
 		return nil
 	}(obj)
 
@@ -133,41 +160,6 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 	}
 
 	return true
-}
-
-func (c *PodController) syncHandler(ctx context.Context, key string) error {
-
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
-		return nil
-	}
-
-	//Returns the pod and the pod metrics objects
-	pod, err := c.initPodCollector(namespace, name)
-	if err != nil {
-		c.logger.Error(err, "Unable to init pod collector ")
-		return nil
-	}
-
-	if pod.Status.Phase == v1.PodRunning {
-		ownerRef := c.returnOwnerReferences(pod)
-		podMisc := c.getPodMiscellaneous(pod)
-		if err != nil {
-			c.logger.Error(err, "Unable to get pod miscellaneous")
-			return nil
-		}
-
-		//Returns the memory and CPU usage of the pod
-		podUsage := c.getPodConsumption(namespace, name)
-
-		err = persistence.GetPersistInterface().InsertPod(name, namespace, podMisc, ownerRef, podUsage)
-
-		if err != nil {
-			c.logger.Error(err, "Error inserting pod data into the database")
-		}
-	}
-	return nil
 }
 
 // This function retrieves the pod object from the informer cache.

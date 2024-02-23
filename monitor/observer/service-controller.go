@@ -114,15 +114,25 @@ func (sc *ServiceController) processNextWorkItem(ctx context.Context) bool {
 			return nil
 		}
 
-		if err := sc.syncHandler(ctx, key); err != nil {
-			// Put the item back on the workqueue to handle any transient errors.
-			sc.servicequeue.AddRateLimited(key)
-			return fmt.Errorf("error syncing '%s': %s, requeuing", key, err.Error())
+		namespace, name, err := cache.SplitMetaNamespaceKey(key)
+		if err != nil {
+			runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+			return nil
 		}
+
+		svcMisc := sc.getServiceMiscellaneous(namespace, name)
+
+		err = persistence.GetPersistInterface().InsertService(name, namespace, svcMisc)
+
+		if err != nil {
+			sc.servicequeue.AddRateLimited(obj)
+			runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+			return nil
+		}
+
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		sc.servicequeue.Forget(obj)
-		sc.logger.Info("Successfully synced", "resourceName", key)
 
 		return nil
 	}(obj)
@@ -137,18 +147,6 @@ func (sc *ServiceController) processNextWorkItem(ctx context.Context) bool {
 
 func (sc *ServiceController) syncHandler(ctx context.Context, key string) error {
 
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
-		return nil
-	}
-	x := sc.getServiceMiscellaneous(namespace, name)
-
-	err = persistence.GetPersistInterface().InsertService(name, namespace, x)
-
-	if err != nil {
-		sc.logger.Error(err, "Error inserting service details into the database")
-	}
 	return nil
 }
 

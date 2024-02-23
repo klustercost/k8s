@@ -115,17 +115,25 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 			runtime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
 			return nil
 		}
+		nodeName, err := cache.ParseObjectName(key)
+		if err != nil {
+			runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+			return nil
+		}
 
-		if err := nc.syncHandler(ctx, key); err != nil {
-			// Put the item back on the workqueue to handle any transient errors.
-			nc.nodequeue.AddRateLimited(key)
-			return fmt.Errorf("error syncing '%s': %s, requeuing", key, err.Error())
+		nodeMisc := nc.getNodeMiscellaneous(nodeName.Name)
+
+		err = persistence.GetPersistInterface().InsertNode(nodeName.Name, nodeMisc)
+
+		if err != nil {
+			nc.nodequeue.AddRateLimited(obj)
+			runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+			return nil
 		}
 
 		nc.nodequeue.Forget(obj)
-		nc.logger.Info("Successfully synced", "resourceName", key)
-		return nil
 
+		return nil
 	}(obj)
 
 	if err != nil {
@@ -134,25 +142,6 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 	}
 
 	return true
-}
-
-func (nc *NodeController) syncHandler(ctx context.Context, key string) error {
-
-	nodeName, err := cache.ParseObjectName(key)
-	if err != nil {
-		runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
-		return nil
-	}
-
-	nodeMisc := nc.getNodeMiscellaneous(nodeName.Name)
-	if err != nil {
-		nc.logger.Error(err, "Unable to init pod collector ")
-		return nil
-	}
-
-	err = persistence.GetPersistInterface().InsertNode(nodeName.Name, nodeMisc)
-
-	return nil
 }
 
 // getNodeMiscellaneous returns the node creation time, memory, cpu and UID
