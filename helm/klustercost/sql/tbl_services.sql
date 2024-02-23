@@ -4,6 +4,7 @@ CREATE TABLE klustercost.tbl_services (
     service_name VARCHAR (100),
     service_insertion_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     own_uid VARCHAR (100),
+    app_label VARCHAR (100),
     labels VARCHAR (200),
     selector VARCHAR (100)
 );

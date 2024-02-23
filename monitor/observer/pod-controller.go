@@ -205,7 +205,7 @@ func (c *PodController) getPodMiscellaneous(pod *v1.Pod) *model.PodMisc {
 	misc.OwnUid = string(pod.ObjectMeta.UID)
 	misc.NodeName = pod.Spec.NodeName
 	misc.Labels = MapToString(pod.ObjectMeta.Labels)
-	misc.AppLabel = findAppLabel(pod.ObjectMeta.Labels)
+	misc.AppLabel = FindAppLabel(pod.ObjectMeta.Labels)
 
 	return misc
 
@@ -250,7 +250,7 @@ func MapToString(labels map[string]string) string {
 	return sb.String()
 }
 
-func findAppLabel(m map[string]string) string {
+func FindAppLabel(m map[string]string) string {
 	for key, value := range m {
 		if strings.HasPrefix(key, "app") {
 			return fmt.Sprintf("%s=%s", key, value)

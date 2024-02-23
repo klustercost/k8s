@@ -145,22 +145,21 @@ func (sc *ServiceController) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
-func (sc *ServiceController) syncHandler(ctx context.Context, key string) error {
-
-	return nil
-}
-
 func (sc *ServiceController) getServiceMiscellaneous(namespace, name string) *model.ServiceMisc {
 
 	service := sc.serviceLister.Services(namespace)
 
 	serviceMisc := &model.ServiceMisc{}
 
-	x, _ := service.Get(name)
-
-	serviceMisc.UID = string(x.UID)
-	serviceMisc.Labels = MapToString(x.Labels)
-	serviceMisc.Selector = MapToString(x.Spec.Selector)
+	serviceObj, err := service.Get(name)
+	if err != nil {
+		sc.logger.Error(err, "Unable to get service object")
+		return nil
+	}
+	serviceMisc.UID = string(serviceObj.UID)
+	serviceMisc.AppLabel = FindAppLabel(serviceObj.Spec.Selector)
+	serviceMisc.Labels = MapToString(serviceObj.Labels)
+	serviceMisc.Selector = MapToString(serviceObj.Spec.Selector)
 
 	return serviceMisc
 }

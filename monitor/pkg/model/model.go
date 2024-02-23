@@ -62,6 +62,7 @@ type AppOwnerReferences struct {
 type ServiceMisc struct {
 	RecordTime time.Time
 	UID        string
+	AppLabel   string
 	Labels     string
 	Selector   string
 }

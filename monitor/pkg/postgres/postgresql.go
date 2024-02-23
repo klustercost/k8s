@@ -85,11 +85,11 @@ func (pg *persistence_pg) InsertOwner(name string, namespace string, allRef *mod
 }
 
 // This function inserts the details of a service into the database
-// func InsertService (name string, namespace string, record_time time.Time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels string) error {
+// func InsertService(name string, namespace string, own_uid, app_label, labels, selector string) error {
 func (pg *persistence_pg) InsertService(name string, namespace string, svcRef *model.ServiceMisc) error {
 
-	_, err := pg.db_connection.Exec("INSERT INTO klustercost.tbl_services(service_name, namespace, own_uid, labels, selector) VALUES($1, $2, $3, NULLIF($4,''), NULLIF($5,''))",
-		name, namespace, svcRef.UID, svcRef.Labels, svcRef.Selector)
+	_, err := pg.db_connection.Exec("INSERT INTO klustercost.tbl_services(service_name, namespace, own_uid, app_label, labels, selector) VALUES($1, $2, $3, NULLIF($4,''), NULLIF($5,''), NULLIF($6,''))",
+		name, namespace, svcRef.UID, svcRef.AppLabel, svcRef.Labels, svcRef.Selector)
 	if err != nil {
 		fmt.Println("Error inserting service details into the database:", err)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
