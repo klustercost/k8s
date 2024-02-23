@@ -17,7 +17,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
-	metricsv "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
 type AppController struct {
@@ -36,7 +35,6 @@ type AppController struct {
 
 func NewAppController(
 	ctx context.Context,
-	metricsClientset *metricsv.Clientset,
 	kubeclientset kubernetes.Interface,
 	informer informers.SharedInformerFactory) *AppController {
 
@@ -167,22 +165,14 @@ func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 			return nil
 		}
 
-		namespace, name, err := cache.SplitMetaNamespaceKey(key)
-		allRef := ac.returnOwnerReferences(namespace, name)
-
-		//Insert the owner details into the database
-		err = persistence.GetPersistInterface().InsertOwner(name, namespace, allRef)
-
-		if err != nil {
-			ac.logger.Error(err, "Error inserting owner details into the database")
+		if err := ac.syncHandler(ctx, key); err != nil {
+			// Put the item back on the workqueue to handle any transient errors.
+			ac.appqueue.AddRateLimited(key)
+			return fmt.Errorf("error syncing '%s': %s, requeuing", key, err.Error())
 		}
 
-		if err != nil {
-			ac.appqueue.Forget(obj)
-			runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
-			return nil
-		}
-
+		ac.appqueue.Forget(obj)
+		ac.logger.Info("Successfully synced", "resourceName", key)
 		return nil
 	}(obj)
 
@@ -192,6 +182,24 @@ func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 	}
 
 	return true
+}
+
+func (ac *AppController) syncHandler(ctx context.Context, key string) error {
+
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		return nil
+	}
+	allRef := ac.returnOwnerReferences(namespace, name)
+
+	//Insert the owner details into the database
+	err = persistence.GetPersistInterface().InsertOwner(name, namespace, allRef)
+
+	if err != nil {
+		ac.logger.Error(err, "Error inserting owner details into the database")
+	}
+	return nil
 }
 
 // Returns owner_version, owner_kind, owner_name, owner_uid
