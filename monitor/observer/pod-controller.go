@@ -47,7 +47,7 @@ func NewController(
 		logger:        klog.FromContext(ctx)}
 
 	_, err := podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		//AddFunc: controller.enqueuePod,
+		AddFunc: controller.enqueuePod,
 		UpdateFunc: func(old, new interface{}) {
 			controller.enqueuePod(new)
 		},
@@ -147,9 +147,8 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 				runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
 				return nil
 			}
+			c.podqueue.Forget(obj)
 		}
-
-		c.podqueue.Forget(obj)
 
 		return nil
 	}(obj)

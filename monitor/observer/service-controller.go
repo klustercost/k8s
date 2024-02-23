@@ -41,7 +41,7 @@ func NewServiceController(
 		logger:        klog.FromContext(ctx)}
 
 	_, err := serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		//AddFunc: nc.enqueueService,
+		AddFunc: sc.enqueueService,
 		UpdateFunc: func(old, new interface{}) {
 			sc.enqueueService(new)
 		},
