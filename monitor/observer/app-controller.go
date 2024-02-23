@@ -194,11 +194,6 @@ func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
-func (ac *AppController) syncHandler(ctx context.Context, key string) error {
-
-	return nil
-}
-
 // Returns owner_version, owner_kind, owner_name, owner_uid
 func ownerReferences(owner []metav1.OwnerReference) *model.OwnerReferences {
 
