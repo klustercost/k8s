@@ -67,8 +67,9 @@ func main() {
 
 	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, time.Second*time.Duration(env.ResyncTime))
 	podcontroller := NewController(ctx, metricsClientset, kubeClient, kubeInformerFactory)
-	nodecontroller := NewNodeController(ctx, metricsClientset, kubeClient, kubeInformerFactory)
-	appcontroller := NewAppController(ctx, metricsClientset, kubeClient, kubeInformerFactory)
+	nodecontroller := NewNodeController(ctx, kubeClient, kubeInformerFactory)
+	appcontroller := NewAppController(ctx, kubeClient, kubeInformerFactory)
+	servicecontroller := NewServiceController(ctx, kubeClient, kubeInformerFactory)
 
 	kubeInformerFactory.Start(ctx.Done())
 
@@ -84,6 +85,11 @@ func main() {
 
 	if err = appcontroller.Run(ctx, env.ControllerWorkers); err != nil {
 		logger.Error(err, "Error running node controller")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+	}
+
+	if err = servicecontroller.Run(ctx, env.ControllerWorkers); err != nil {
+		logger.Error(err, "Error running service controller")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 	<-ctx.Done()

@@ -17,7 +17,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
-	metricsv "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
 type AppController struct {
@@ -36,7 +35,6 @@ type AppController struct {
 
 func NewAppController(
 	ctx context.Context,
-	metricsClientset *metricsv.Clientset,
 	kubeclientset kubernetes.Interface,
 	informer informers.SharedInformerFactory) *AppController {
 
@@ -60,25 +58,25 @@ func NewAppController(
 		logger:        klog.FromContext(ctx)}
 
 	_, err := dsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		//AddFunc: ac.enqueueApp,
+		AddFunc: ac.enqueueApp,
 		UpdateFunc: func(old, new interface{}) {
 			ac.enqueueApp(new)
 		},
 	})
 	_, err = deployInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		//AddFunc: ac.enqueueApp,
+		AddFunc: ac.enqueueApp,
 		UpdateFunc: func(old, new interface{}) {
 			ac.enqueueApp(new)
 		},
 	})
 	_, err = sSetInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		//AddFunc: ac.enqueueApp,
+		AddFunc: ac.enqueueApp,
 		UpdateFunc: func(old, new interface{}) {
 			ac.enqueueApp(new)
 		},
 	})
 	_, err = rSetInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		//AddFunc: ac.enqueueApp,
+		AddFunc: ac.enqueueApp,
 		UpdateFunc: func(old, new interface{}) {
 			ac.enqueueApp(new)
 		},
@@ -168,20 +166,22 @@ func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 		}
 
 		namespace, name, err := cache.SplitMetaNamespaceKey(key)
+		if err != nil {
+			runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+			return nil
+		}
 		allRef := ac.returnOwnerReferences(namespace, name)
 
 		//Insert the owner details into the database
 		err = persistence.GetPersistInterface().InsertOwner(name, namespace, allRef)
 
 		if err != nil {
-			ac.logger.Error(err, "Error inserting owner details into the database")
-		}
-
-		if err != nil {
-			ac.appqueue.Forget(obj)
+			ac.appqueue.AddRateLimited(obj)
 			runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
 			return nil
 		}
+
+		ac.appqueue.Forget(obj)
 
 		return nil
 	}(obj)

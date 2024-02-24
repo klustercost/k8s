@@ -39,6 +39,7 @@ type PodMisc struct {
 	OwnUid     string
 	Labels     string
 	NodeName   string
+	AppLabel   string
 }
 
 // record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels
@@ -53,4 +54,15 @@ type AppOwnerReferences struct {
 	OwnerName    string
 	OwnerUid     string
 	Labels       string
+}
+
+// ServiceMisc is a struct that contains the node miscellaneous information
+// It is used to insert data into the database
+// Used by service-controller.go
+type ServiceMisc struct {
+	RecordTime time.Time
+	UID        string
+	AppLabel   string
+	Labels     string
+	Selector   string
 }

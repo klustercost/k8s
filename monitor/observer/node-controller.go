@@ -17,7 +17,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
-	metricsv "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
 type NodeController struct {
@@ -30,7 +29,6 @@ type NodeController struct {
 
 func NewNodeController(
 	ctx context.Context,
-	metricsClientset *metricsv.Clientset,
 	kubeclientset kubernetes.Interface,
 	informer informers.SharedInformerFactory) *NodeController {
 
@@ -44,7 +42,7 @@ func NewNodeController(
 		logger:        klog.FromContext(ctx)}
 
 	_, err := nodesInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		//AddFunc: nc.enqueueNode,
+		AddFunc: nc.enqueueNode,
 		UpdateFunc: func(old, new interface{}) {
 			nc.enqueueNode(new)
 		},
@@ -119,22 +117,21 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 		}
 		nodeName, err := cache.ParseObjectName(key)
 		if err != nil {
-			nc.logger.Error(err, "Error parsing object name")
+			runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+			return nil
 		}
 
 		nodeMisc := nc.getNodeMiscellaneous(nodeName.Name)
-		if err != nil {
-			nc.logger.Error(err, "Unable to init pod collector ")
-			return nil
-		}
 
 		err = persistence.GetPersistInterface().InsertNode(nodeName.Name, nodeMisc)
 
 		if err != nil {
-			nc.nodequeue.Forget(obj)
+			nc.nodequeue.AddRateLimited(obj)
 			runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
 			return nil
 		}
+
+		nc.nodequeue.Forget(obj)
 
 		return nil
 	}(obj)

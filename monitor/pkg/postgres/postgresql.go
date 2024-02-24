@@ -44,8 +44,8 @@ func (pg *persistence_pg) Close() {
 // This function inserts the details of a pod into the database
 func (pg *persistence_pg) InsertPod(pod_name, namespace string, podMisc *model.PodMisc, ownerRef *model.OwnerReferences, podUsage *model.PodConsumption) error {
 
-	_, err := pg.db_connection.Exec("INSERT INTO klustercost.tbl_pods(pod_name, namespace, record_time, used_mem, used_cpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, labels, node_name)	VALUES($1, $2, $3, $4, $5, NULLIF($6,''), NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), $10, $11, $12)",
-		pod_name, namespace, podMisc.RecordTime, podUsage.Memory, podUsage.CPU, ownerRef.OwnerVersion, ownerRef.OwnerKind, ownerRef.OwnerName, ownerRef.OwnerUid, podMisc.OwnUid, podMisc.Labels, podMisc.NodeName)
+	_, err := pg.db_connection.Exec("INSERT INTO klustercost.tbl_pods(pod_name, namespace, record_time, used_mem, used_cpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, app_label, labels, node_name)	VALUES($1, $2, $3, $4, $5, NULLIF($6,''), NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), $10, NULLIF($11,''), $12, $13)",
+		pod_name, namespace, podMisc.RecordTime, podUsage.Memory, podUsage.CPU, ownerRef.OwnerVersion, ownerRef.OwnerKind, ownerRef.OwnerName, ownerRef.OwnerUid, podMisc.OwnUid, podMisc.AppLabel, podMisc.Labels, podMisc.NodeName)
 	if err != nil {
 		fmt.Println("Error inserting pod details into the database:", err)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
@@ -73,7 +73,7 @@ func (pg *persistence_pg) InsertNode(node_name string, nodeMisc *model.NodeMisc)
 // func InsertOwner(name string, namespace string, record_time time.Time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels string) error {
 func (pg *persistence_pg) InsertOwner(name string, namespace string, allRef *model.AppOwnerReferences) error {
 
-	_, err := pg.db_connection.Exec("INSERT INTO klustercost.tbl_owners(name, namespace, record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels) VALUES($1, $2, $3, $4, $5, $6, NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), NULLIF($10,''), NULLIF($11,''))",
+	_, err := pg.db_connection.Exec("INSERT INTO klustercost.tbl_owners(name, namespace, record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels) VALUES($1, $2, $3, $4, $5, NULLIF($6,''), NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), NULLIF($10,''), NULLIF($11,''))",
 		name, namespace, allRef.RecordTime, allRef.OwnVersion, allRef.OwnKind, allRef.OwnerUid, allRef.OwnerVersion, allRef.OwnKind, allRef.OwnerName, allRef.OwnerUid, allRef.Labels)
 	if err != nil {
 		fmt.Println("Error inserting owner details into the database:", err)
@@ -81,5 +81,20 @@ func (pg *persistence_pg) InsertOwner(name string, namespace string, allRef *mod
 		return err
 	}
 	fmt.Println("INSERTED Owner:", name, namespace, "owner kind", allRef.OwnKind)
+	return nil
+}
+
+// This function inserts the details of a service into the database
+// func InsertService(name string, namespace string, own_uid, app_label, labels, selector string) error {
+func (pg *persistence_pg) InsertService(name string, namespace string, svcRef *model.ServiceMisc) error {
+
+	_, err := pg.db_connection.Exec("INSERT INTO klustercost.tbl_services(service_name, namespace, own_uid, app_label, labels, selector) VALUES($1, $2, $3, NULLIF($4,''), NULLIF($5,''), NULLIF($6,''))",
+		name, namespace, svcRef.UID, svcRef.AppLabel, svcRef.Labels, svcRef.Selector)
+	if err != nil {
+		fmt.Println("Error inserting service details into the database:", err)
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+		return err
+	}
+	fmt.Println("INSERTED Service:", name, namespace, "service selector", svcRef.Selector)
 	return nil
 }

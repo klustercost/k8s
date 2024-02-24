@@ -11,6 +11,7 @@ CREATE TABLE klustercost.tbl_pods (
     owner_name VARCHAR (100),
     owner_uid VARCHAR (100),
     own_uid VARCHAR (100),
+    app_label VARCHAR (100),
     labels VARCHAR (10000),
     node_name VARCHAR (100)
 );

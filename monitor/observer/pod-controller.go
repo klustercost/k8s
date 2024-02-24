@@ -47,7 +47,7 @@ func NewController(
 		logger:        klog.FromContext(ctx)}
 
 	_, err := podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		//AddFunc: controller.enqueuePod,
+		AddFunc: controller.enqueuePod,
 		UpdateFunc: func(old, new interface{}) {
 			controller.enqueuePod(new)
 		},
@@ -118,8 +118,10 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 
 		namespace, name, err := cache.SplitMetaNamespaceKey(key)
 		if err != nil {
-			c.logger.Error(err, "Invalid resource key: ", key)
+			runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+			return nil
 		}
+
 		//Returns the pod and the pod metrics objects
 		pod, err := c.initPodCollector(namespace, name)
 		if err != nil {
@@ -141,14 +143,11 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 			err = persistence.GetPersistInterface().InsertPod(name, namespace, podMisc, ownerRef, podUsage)
 
 			if err != nil {
-				c.logger.Error(err, "Error inserting pod data into the database")
+				c.podqueue.AddRateLimited(obj)
+				runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+				return nil
 			}
-		}
-
-		if err != nil {
 			c.podqueue.Forget(obj)
-			runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
-			return nil
 		}
 
 		return nil
@@ -205,6 +204,7 @@ func (c *PodController) getPodMiscellaneous(pod *v1.Pod) *model.PodMisc {
 	misc.OwnUid = string(pod.ObjectMeta.UID)
 	misc.NodeName = pod.Spec.NodeName
 	misc.Labels = MapToString(pod.ObjectMeta.Labels)
+	misc.AppLabel = FindAppLabel(pod.ObjectMeta.Labels)
 
 	return misc
 
@@ -247,4 +247,13 @@ func MapToString(labels map[string]string) string {
 		i++
 	}
 	return sb.String()
+}
+
+func FindAppLabel(m map[string]string) string {
+	for key, value := range m {
+		if strings.HasPrefix(key, "app") {
+			return fmt.Sprintf("%s=%s", key, value)
+		}
+	}
+	return ""
 }
