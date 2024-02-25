@@ -1,10 +1,11 @@
-package main
+package controller
 
 import (
 	"context"
 	"fmt"
 	"klustercost/monitor/pkg/model"
 	"klustercost/monitor/pkg/persistence"
+	"klustercost/monitor/pkg/utils"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -145,6 +146,11 @@ func (sc *ServiceController) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
+// Returns the friendly name of the controller
+func (sc *ServiceController) FriendlyName() string {
+	return "ServiceController"
+}
+
 func (sc *ServiceController) getServiceMiscellaneous(namespace, name string) *model.ServiceMisc {
 
 	service := sc.serviceLister.Services(namespace)
@@ -157,9 +163,9 @@ func (sc *ServiceController) getServiceMiscellaneous(namespace, name string) *mo
 		return nil
 	}
 	serviceMisc.UID = string(serviceObj.UID)
-	serviceMisc.AppLabel = FindAppLabel(serviceObj.Spec.Selector)
-	serviceMisc.Labels = MapToString(serviceObj.Labels)
-	serviceMisc.Selector = MapToString(serviceObj.Spec.Selector)
+	serviceMisc.AppLabel = utils.FindAppLabel(serviceObj.Spec.Selector)
+	serviceMisc.Labels = utils.MapToString(serviceObj.Labels)
+	serviceMisc.Selector = utils.MapToString(serviceObj.Spec.Selector)
 
 	return serviceMisc
 }

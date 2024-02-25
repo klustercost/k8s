@@ -1,10 +1,11 @@
-package main
+package controller
 
 import (
 	"context"
 	"fmt"
 	"klustercost/monitor/pkg/model"
 	"klustercost/monitor/pkg/persistence"
+	"klustercost/monitor/pkg/utils"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -210,6 +211,11 @@ func ownerReferences(owner []metav1.OwnerReference) *model.OwnerReferences {
 	return ownerRef
 }
 
+// Returns the friendly name of the controller
+func (ac *AppController) FriendlyName() string {
+	return "AppController"
+}
+
 // record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels
 func (ac *AppController) returnOwnerReferences(namespace, name string) *model.AppOwnerReferences {
 	appOwnerReference := &model.AppOwnerReferences{}
@@ -253,7 +259,7 @@ func defineOwnerDetails[T metav1.Object](k8sObj T, recordTime time.Time, kind st
 	appOwnerReference.OwnerKind = ownerRef.OwnerKind
 	appOwnerReference.OwnerName = ownerRef.OwnerName
 	appOwnerReference.OwnerUid = ownerRef.OwnerUid
-	appOwnerReference.Labels = MapToString(k8sObj.GetLabels())
+	appOwnerReference.Labels = utils.MapToString(k8sObj.GetLabels())
 
 	return appOwnerReference
 

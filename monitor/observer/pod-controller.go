@@ -1,11 +1,11 @@
-package main
+package controller
 
 import (
 	"context"
 	"fmt"
 	"klustercost/monitor/pkg/model"
 	"klustercost/monitor/pkg/persistence"
-	"strings"
+	"klustercost/monitor/pkg/utils"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -161,6 +161,11 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
+// Returns the friendly name of the controller
+func (c *PodController) FriendlyName() string {
+	return "PodController"
+}
+
 // This function retrieves the pod object from the informer cache.
 func (c *PodController) initPodCollector(namespace, name string) (*v1.Pod, error) {
 	pod, err := c.podsLister.Pods(namespace).Get(name)
@@ -203,8 +208,8 @@ func (c *PodController) getPodMiscellaneous(pod *v1.Pod) *model.PodMisc {
 	}
 	misc.OwnUid = string(pod.ObjectMeta.UID)
 	misc.NodeName = pod.Spec.NodeName
-	misc.Labels = MapToString(pod.ObjectMeta.Labels)
-	misc.AppLabel = FindAppLabel(pod.ObjectMeta.Labels)
+	misc.Labels = utils.MapToString(pod.ObjectMeta.Labels)
+	misc.AppLabel = utils.FindAppLabel(pod.ObjectMeta.Labels)
 
 	return misc
 
@@ -229,31 +234,4 @@ func (c *PodController) getPodConsumption(namespace, name string) *model.PodCons
 	}
 
 	return usage
-}
-
-// Helper function to convert values of a map[string]string to a csv string.
-// Map key and value are returned separated by comma key=value,key=value.
-func MapToString(labels map[string]string) string {
-	var sb strings.Builder
-
-	i := 0
-	for key, value := range labels {
-		sb.WriteString(key)
-		sb.WriteString("=")
-		sb.WriteString(value)
-		if i < len(labels)-1 {
-			sb.WriteString(",")
-		}
-		i++
-	}
-	return sb.String()
-}
-
-func FindAppLabel(m map[string]string) string {
-	for key, value := range m {
-		if strings.HasPrefix(key, "app") {
-			return fmt.Sprintf("%s=%s", key, value)
-		}
-	}
-	return ""
 }
