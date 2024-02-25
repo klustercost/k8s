@@ -11,7 +11,7 @@ import (
 	"klustercost/monitor/pkg/signals"
 	"klustercost/monitor/pkg/version"
 
-	controller "klustercost/monitor/observer"
+	controller "klustercost/monitor/controllers"
 
 	"github.com/go-logr/logr"
 	_ "github.com/lib/pq"
