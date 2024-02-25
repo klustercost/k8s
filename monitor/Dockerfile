@@ -4,6 +4,7 @@ FROM golang:1.21-bullseye as build
 
 WORKDIR /app
 COPY ./observer/*.go ./
+COPY main.go ./
 COPY go.mod ./
 COPY go.sum ./
 RUN go mod download

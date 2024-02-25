@@ -1,4 +1,4 @@
-package main
+package controller
 
 import (
 	"context"
@@ -142,6 +142,11 @@ func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
 	}
 
 	return true
+}
+
+// Returns the friendly name of the controller
+func (nc *NodeController) FriendlyName() string {
+	return "NodeController"
 }
 
 // getNodeMiscellaneous returns the node creation time, memory, cpu and UID
