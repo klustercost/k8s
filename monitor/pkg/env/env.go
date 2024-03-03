@@ -18,6 +18,7 @@ type EnvVars struct {
 	PgDbName          string
 	PgDbHost          string
 	PgDbPort          string
+	PrometheusServer  string
 }
 
 // InitEnvVars reads the env file and sets the env variables
@@ -45,7 +46,7 @@ func NewConfiguration() *EnvVars {
 	}
 
 	//Defualt values for the env variables
-	result := &EnvVars{60, 2, "postgres", "admin", "klustercost", "localhost", "5432"}
+	result := &EnvVars{60, 2, "postgres", "admin", "klustercost", "localhost", "5432", "http://127.0.0.1:8080"}
 
 	resync_time, err := strconv.Atoi(os.Getenv("RESYNC_TIME"))
 	if err == nil {
@@ -94,6 +95,13 @@ func NewConfiguration() *EnvVars {
 		result.PgDbHost = pg_db_host
 	} else {
 		logger.Info("PG_DB_HOST not set, using default value 127.0.0.1")
+	}
+
+	prometheus_server := os.Getenv("PROMETHEUS_SERVER")
+	if prometheus_server != "" {
+		result.PrometheusServer = prometheus_server
+	} else {
+		logger.Info("PROMETHEUS_SERVER not set, using default value http://127.0.0.1:8080")
 	}
 
 	return result
