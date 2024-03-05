@@ -26,7 +26,6 @@ type PodController struct {
 	podsLister    corelisters.PodLister
 	podsSynced    cache.InformerSynced
 	podqueue      workqueue.RateLimitingInterface
-	prometheus    prometheusApi.Client
 	prometheusapi prometheusv1.API
 	logger        klog.Logger
 }
@@ -137,7 +136,7 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 				c.logger.Error(err, "Unable to get pod miscellaneous")
 				return nil
 			}
-			working_set, err := c.getPrometheusData(ctx, "container_memory_working_set_bytes", namespace, name, "1m")
+			working_set, err := c.getPromData(ctx, "container_memory_usage_bytes", namespace, name, "1m")
 			if err != nil {
 				return err
 			}
@@ -220,11 +219,12 @@ func (c *PodController) getPodMiscellaneous(pod *v1.Pod) *model.PodMisc {
 
 }
 
-func (c *PodController) getPrometheusData(ctx context.Context, metric string, namespace string, service string, timeRange string) (*promModel.Sample, error) {
+func (c *PodController) getPromData(ctx context.Context, metric string, namespace string, service string, timeRange string) (*promModel.Sample, error) {
 	logger := klog.FromContext(ctx)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	result, _, err := c.prometheusapi.Query(ctx, c.form_query(metric, namespace, service, timeRange), time.Now(), prometheusv1.WithTimeout(5*time.Second))
+
 	if err != nil {
 		return nil, fmt.Errorf("error querying prometheus client %#v", err)
 	}
@@ -239,5 +239,5 @@ func (c *PodController) getPrometheusData(ctx context.Context, metric string, na
 }
 
 func (c *PodController) form_query(query string, namespace string, pod string, timeRange string) string {
-	return "max(max_over_time(" + query + "{namespace=\"" + namespace + "\", pod=~\"" + pod + ".*\", image!=\"\", container_name!=\"POD\"}[" + timeRange + "]))"
+	return "max(max_over_time(" + query + "{namespace=\"" + namespace + "\", pod=~\"" + pod + ".*\", container_name!=\"POD\"}[" + timeRange + "]))"
 }
