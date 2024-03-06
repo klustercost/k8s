@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	promModel "github.com/prometheus/common/model"
+)
 
 // NodeMisc is a struct that contains the node miscellaneous information
 // It is used to insert data into the database
@@ -12,6 +16,14 @@ type NodeMisc struct {
 	Labels string
 }
 
+// This struct is used to store the memory and CPU usage of a pod
+// It is used to insert data into the database
+// Used by pod-controller.go
+type PodConsumption struct {
+	Memory *promModel.Sample
+	CPU    *promModel.Sample
+}
+
 // This struct is used to store the owner_version, owner_kind, owner_name, owner_uid of a *v1.Pod
 // It is used to insert data into the database
 // Used by pod-controller.go and app-controller.go
@@ -20,14 +32,6 @@ type OwnerReferences struct {
 	OwnerKind    string
 	OwnerName    string
 	OwnerUid     string
-}
-
-// This struct is used to store the memory and CPU usage of a pod
-// It is used to insert data into the database
-// Used by pod-controller.go
-type PodConsumption struct {
-	Memory int64
-	CPU    int64
 }
 
 // This struct is used to store the record_time, owner_uid, own_uid, labels node_name

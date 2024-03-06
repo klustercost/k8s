@@ -45,7 +45,7 @@ func (pg *persistence_pg) Close() {
 func (pg *persistence_pg) InsertPod(pod_name, namespace string, podMisc *model.PodMisc, ownerRef *model.OwnerReferences, podUsage *model.PodConsumption) error {
 
 	_, err := pg.db_connection.Exec("INSERT INTO klustercost.tbl_pods(pod_name, namespace, record_time, used_mem, used_cpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, app_label, labels, node_name)	VALUES($1, $2, $3, $4, $5, NULLIF($6,''), NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), $10, NULLIF($11,''), $12, $13)",
-		pod_name, namespace, podMisc.RecordTime, podUsage.Memory, podUsage.CPU, ownerRef.OwnerVersion, ownerRef.OwnerKind, ownerRef.OwnerName, ownerRef.OwnerUid, podMisc.OwnUid, podMisc.AppLabel, podMisc.Labels, podMisc.NodeName)
+		pod_name, namespace, podMisc.RecordTime, podUsage.Memory.Value, podUsage.CPU.Value, ownerRef.OwnerVersion, ownerRef.OwnerKind, ownerRef.OwnerName, ownerRef.OwnerUid, podMisc.OwnUid, podMisc.AppLabel, podMisc.Labels, podMisc.NodeName)
 	if err != nil {
 		fmt.Println("Error inserting pod details into the database:", err)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
