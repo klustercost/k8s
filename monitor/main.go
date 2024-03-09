@@ -67,7 +67,7 @@ func main() {
 	prometheusaddress := env.PrometheusServer
 
 	if len(prometheusaddress) == 0 {
-		prometheusaddress = "http://127.0.0.1:8080"
+		prometheusaddress = "http://prometheus-server.monitoring.svc.cluster.local:8080"
 	}
 
 	prometheusclient, err := prometheusApi.NewClient(prometheusApi.Config{Address: prometheusaddress})
