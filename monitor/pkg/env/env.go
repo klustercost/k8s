@@ -46,13 +46,13 @@ func NewConfiguration() *EnvVars {
 	}
 
 	//Defualt values for the env variables
-	result := &EnvVars{60, 2, "postgres", "admin", "klustercost", "localhost", "5432", "http://127.0.0.1:8080"}
+	result := &EnvVars{600, 2, "postgres", "admin", "klustercost", "localhost", "5432", "http://127.0.0.1:8080"}
 
 	resync_time, err := strconv.Atoi(os.Getenv("RESYNC_TIME"))
 	if err == nil {
 		result.ResyncTime = resync_time
 	} else {
-		logger.Info("RESYNC_TIME not set, using default value of 60s")
+		logger.Info("RESYNC_TIME not set, using default value of 600s")
 	}
 
 	controller_workers, err := strconv.Atoi(os.Getenv("CONTROLLER_WORKERS"))

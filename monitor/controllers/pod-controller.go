@@ -3,9 +3,11 @@ package controller
 import (
 	"context"
 	"fmt"
+	"klustercost/monitor/pkg/env"
 	"klustercost/monitor/pkg/model"
 	"klustercost/monitor/pkg/persistence"
 	"klustercost/monitor/pkg/utils"
+	"strconv"
 	"time"
 
 	prometheusApi "github.com/prometheus/client_golang/api"
@@ -21,6 +23,8 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 )
+
+var e = env.NewConfiguration()
 
 type PodController struct {
 	kubeclientset kubernetes.Interface
@@ -138,7 +142,7 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 				return nil
 			}
 			//Returns the memory and CPU usage of the pod
-			podUsage, err := c.getPromData(ctx, namespace, name, "10m")
+			podUsage, err := c.getPromData(ctx, namespace, name, strconv.Itoa(e.ResyncTime))
 			if err != nil {
 				return err
 			}
@@ -213,6 +217,7 @@ func (c *PodController) getPodMiscellaneous(pod *v1.Pod) *model.PodMisc {
 	misc.NodeName = pod.Spec.NodeName
 	misc.Labels = utils.MapToString(pod.ObjectMeta.Labels)
 	misc.AppLabel = utils.FindAppLabel(pod.ObjectMeta.Labels)
+	misc.Shard = e.ResyncTime
 
 	return misc
 
@@ -225,16 +230,26 @@ func (c *PodController) getPromData(ctx context.Context, namespace string, servi
 
 	results := &model.PodConsumption{}
 
-	mem_result, _, err := c.prometheusapi.Query(ctx, c.returnMemory(namespace, service, timeRange), time.Now(), prometheusv1.WithTimeout(5*time.Second))
+	mem_result_ws, _, err := c.prometheusapi.Query(ctx, c.returnMemory(namespace, "container_memory_working_set_bytes", service, timeRange), time.Now(), prometheusv1.WithTimeout(5*time.Second))
 	if err != nil {
 		return nil, fmt.Errorf("error querying prometheus client %#v", err)
 	}
-	vector_mem_result := mem_result.(promModel.Vector)
+	vector_mem_result_ws := mem_result_ws.(promModel.Vector)
 
-	if vector_mem_result.Len() == 0 {
-		return nil, fmt.Errorf("dont have memory data for %v in %v", service, namespace)
+	if vector_mem_result_ws.Len() == 0 {
+		return nil, fmt.Errorf("dont have memory working_set data for %v in %v", service, namespace)
 	}
 
+	mem_result_rss, _, err := c.prometheusapi.Query(ctx, c.returnMemory(namespace, "container_memory_rss", service, timeRange), time.Now(), prometheusv1.WithTimeout(5*time.Second))
+	if err != nil {
+		return nil, fmt.Errorf("error querying prometheus client %#v", err)
+	}
+	vector_mem_result_rss := mem_result_rss.(promModel.Vector)
+
+	if vector_mem_result_rss.Len() == 0 {
+		return nil, fmt.Errorf("dont have memory rss data for %v in %v", service, namespace)
+	}
+	fmt.Println("THIS IS RETURN CPU", c.returnCPU(namespace, service, timeRange))
 	cpu_result, _, err := c.prometheusapi.Query(ctx, c.returnCPU(namespace, service, timeRange), time.Now(), prometheusv1.WithTimeout(5*time.Second))
 	if err != nil {
 		return nil, fmt.Errorf("error querying prometheus client %#v", err)
@@ -245,16 +260,21 @@ func (c *PodController) getPromData(ctx context.Context, namespace string, servi
 		return nil, fmt.Errorf("dont have CPU data for %v in %v", service, namespace)
 	}
 
-	results.Memory = vector_mem_result[0]
+	if vector_mem_result_rss[0].Value < vector_mem_result_ws[0].Value {
+		results.Memory = vector_mem_result_ws[0]
+	} else {
+		results.Memory = vector_mem_result_rss[0]
+	}
+
 	results.CPU = vector_cpu_result[0]
 
 	return results, nil
 }
 
-func (c *PodController) returnMemory(namespace string, pod string, timeRange string) string {
-	return "max(avg_over_time(container_memory_usage_bytes{namespace=\"" + namespace + "\", pod=~\"" + pod + ".*\", container_name!=\"POD\"}[" + timeRange + "]))"
+func (c *PodController) returnMemory(namespace string, metric string, pod string, timeRange string) string {
+	return "max(avg_over_time(" + metric + "{namespace=\"" + namespace + "\", pod=~\"" + pod + ".*\", container_name!=\"POD\"}[" + timeRange + "s]))/1024/1024"
 }
 
 func (c *PodController) returnCPU(namespace string, pod string, timeRange string) string {
-	return "sum(rate(container_cpu_usage_seconds_total{namespace=\"" + namespace + "\", pod=~\"" + pod + ".*\", container_name!=\"POD\"}[" + timeRange + "]))"
+	return "delta(container_cpu_usage_seconds_total{namespace=\"" + namespace + "\", pod=~\"" + pod + ".*\", container_name!=\"POD\"}[" + timeRange + "s] )/" + timeRange + ""
 }

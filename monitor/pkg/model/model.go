@@ -44,6 +44,7 @@ type PodMisc struct {
 	Labels     string
 	NodeName   string
 	AppLabel   string
+	Shard      int
 }
 
 // record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels
