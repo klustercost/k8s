@@ -249,7 +249,7 @@ func (c *PodController) getPromData(ctx context.Context, namespace string, servi
 	if vector_mem_result_rss.Len() == 0 {
 		return nil, fmt.Errorf("dont have memory rss data for %v in %v", service, namespace)
 	}
-	fmt.Println("THIS IS RETURN CPU", c.returnCPU(namespace, service, timeRange))
+
 	cpu_result, _, err := c.prometheusapi.Query(ctx, c.returnCPU(namespace, service, timeRange), time.Now(), prometheusv1.WithTimeout(5*time.Second))
 	if err != nil {
 		return nil, fmt.Errorf("error querying prometheus client %#v", err)
