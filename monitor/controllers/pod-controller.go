@@ -3,13 +3,17 @@ package controller
 import (
 	"context"
 	"fmt"
+	"klustercost/monitor/pkg/env"
 	"klustercost/monitor/pkg/model"
 	"klustercost/monitor/pkg/persistence"
 	"klustercost/monitor/pkg/utils"
+	"strconv"
 	"time"
 
+	prometheusApi "github.com/prometheus/client_golang/api"
+	prometheusv1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	promModel "github.com/prometheus/common/model"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
@@ -18,22 +22,23 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
-	metricsv "k8s.io/metrics/pkg/client/clientset/versioned"
 )
+
+var e = env.NewConfiguration()
 
 type PodController struct {
 	kubeclientset kubernetes.Interface
 	podsLister    corelisters.PodLister
 	podsSynced    cache.InformerSynced
 	podqueue      workqueue.RateLimitingInterface
-	metrics       metricsv.Clientset
+	prometheusapi prometheusv1.API
 	logger        klog.Logger
 }
 
 func NewController(
 	ctx context.Context,
-	metricsClientset *metricsv.Clientset,
 	kubeclientset kubernetes.Interface,
+	prometheusclient prometheusApi.Client,
 	informer informers.SharedInformerFactory) *PodController {
 
 	podInformer := informer.Core().V1().Pods()
@@ -43,7 +48,7 @@ func NewController(
 		podsLister:    podInformer.Lister(),
 		podsSynced:    podInformer.Informer().HasSynced,
 		podqueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Pods"),
-		metrics:       *metricsClientset,
+		prometheusapi: prometheusv1.NewAPI(prometheusclient),
 		logger:        klog.FromContext(ctx)}
 
 	_, err := podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -136,9 +141,11 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 				c.logger.Error(err, "Unable to get pod miscellaneous")
 				return nil
 			}
-
 			//Returns the memory and CPU usage of the pod
-			podUsage := c.getPodConsumption(namespace, name)
+			podUsage, err := c.getPromData(ctx, namespace, name, strconv.Itoa(e.ResyncTime))
+			if err != nil {
+				return err
+			}
 
 			err = persistence.GetPersistInterface().InsertPod(name, namespace, podMisc, ownerRef, podUsage)
 
@@ -210,28 +217,64 @@ func (c *PodController) getPodMiscellaneous(pod *v1.Pod) *model.PodMisc {
 	misc.NodeName = pod.Spec.NodeName
 	misc.Labels = utils.MapToString(pod.ObjectMeta.Labels)
 	misc.AppLabel = utils.FindAppLabel(pod.ObjectMeta.Labels)
+	misc.Shard = e.ResyncTime
 
 	return misc
 
 }
 
-// This function retrieves the pod metrics object from the metrics server.
-// And then returns the memory and CPU usage of a pod
-// It queries the metrics server
-func (c *PodController) getPodConsumption(namespace, name string) *model.PodConsumption {
+func (c *PodController) getPromData(ctx context.Context, namespace string, service string, timeRange string) (*model.PodConsumption, error) {
 
-	usage := &model.PodConsumption{}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-	pod, err := c.metrics.MetricsV1beta1().PodMetricses(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	results := &model.PodConsumption{}
+
+	mem_result_ws, _, err := c.prometheusapi.Query(ctx, c.returnMemory(namespace, "container_memory_working_set_bytes", service, timeRange), time.Now(), prometheusv1.WithTimeout(5*time.Second))
 	if err != nil {
-		c.logger.Error(err, "Error getting pod metrics ")
+		return nil, fmt.Errorf("error querying prometheus client %#v", err)
+	}
+	vector_mem_result_ws := mem_result_ws.(promModel.Vector)
+
+	if vector_mem_result_ws.Len() == 0 {
+		return nil, fmt.Errorf("dont have memory working_set data for %v in %v", service, namespace)
 	}
 
-	// Calculate total memory usage for the entire pod
-	for i := 0; i < len(pod.Containers); i++ {
-		usage.Memory += pod.Containers[i].Usage.Memory().Value()
-		usage.CPU += pod.Containers[i].Usage.Cpu().MilliValue()
+	mem_result_rss, _, err := c.prometheusapi.Query(ctx, c.returnMemory(namespace, "container_memory_rss", service, timeRange), time.Now(), prometheusv1.WithTimeout(5*time.Second))
+	if err != nil {
+		return nil, fmt.Errorf("error querying prometheus client %#v", err)
+	}
+	vector_mem_result_rss := mem_result_rss.(promModel.Vector)
+
+	if vector_mem_result_rss.Len() == 0 {
+		return nil, fmt.Errorf("dont have memory rss data for %v in %v", service, namespace)
 	}
 
-	return usage
+	cpu_result, _, err := c.prometheusapi.Query(ctx, c.returnCPU(namespace, service, timeRange), time.Now(), prometheusv1.WithTimeout(5*time.Second))
+	if err != nil {
+		return nil, fmt.Errorf("error querying prometheus client %#v", err)
+	}
+	vector_cpu_result := cpu_result.(promModel.Vector)
+
+	if vector_cpu_result.Len() == 0 {
+		return nil, fmt.Errorf("dont have CPU data for %v in %v", service, namespace)
+	}
+
+	if vector_mem_result_rss[0].Value < vector_mem_result_ws[0].Value {
+		results.Memory = vector_mem_result_ws[0]
+	} else {
+		results.Memory = vector_mem_result_rss[0]
+	}
+
+	results.CPU = vector_cpu_result[0]
+
+	return results, nil
+}
+
+func (c *PodController) returnMemory(namespace string, metric string, pod string, timeRange string) string {
+	return "max(avg_over_time(" + metric + "{namespace=\"" + namespace + "\", pod=~\"" + pod + ".*\", container_name!=\"POD\"}[" + timeRange + "s]))/1024/1024"
+}
+
+func (c *PodController) returnCPU(namespace string, pod string, timeRange string) string {
+	return "delta(container_cpu_usage_seconds_total{namespace=\"" + namespace + "\", pod=~\"" + pod + ".*\", container_name!=\"POD\"}[" + timeRange + "s] )/" + timeRange + ""
 }

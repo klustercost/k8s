@@ -26,7 +26,7 @@ func MapToString(labels map[string]string) string {
 func FindAppLabel(m map[string]string) string {
 	for key, value := range m {
 		if strings.HasPrefix(key, "app") {
-			return fmt.Sprintf("%s=%s", key, value)
+			return fmt.Sprintf("%s", value)
 		}
 	}
 	return ""

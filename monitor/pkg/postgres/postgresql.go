@@ -42,10 +42,10 @@ func (pg *persistence_pg) Close() {
 }
 
 // This function inserts the details of a pod into the database
-func (pg *persistence_pg) InsertPod(pod_name, namespace string, podMisc *model.PodMisc, ownerRef *model.OwnerReferences, podUsage *model.PodConsumption) error {
 
-	_, err := pg.db_connection.Exec("INSERT INTO klustercost.tbl_pods(pod_name, namespace, record_time, used_mem, used_cpu, owner_version, owner_kind, owner_name, owner_uid, own_uid, app_label, labels, node_name)	VALUES($1, $2, $3, $4, $5, NULLIF($6,''), NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), $10, NULLIF($11,''), $12, $13)",
-		pod_name, namespace, podMisc.RecordTime, podUsage.Memory, podUsage.CPU, ownerRef.OwnerVersion, ownerRef.OwnerKind, ownerRef.OwnerName, ownerRef.OwnerUid, podMisc.OwnUid, podMisc.AppLabel, podMisc.Labels, podMisc.NodeName)
+func (pg *persistence_pg) InsertPod(pod_name, namespace string, podMisc *model.PodMisc, ownerRef *model.OwnerReferences, podUsage *model.PodConsumption) error {
+	_, err := pg.db_connection.Exec("CALL klustercost.register_pod($1, $2, $3, NULLIF($4,''), $5, NULLIF($6,''), NULLIF($7,''),NULLIF($8,''), NULLIF($9,''))",
+		podMisc.RecordTime, namespace, podMisc.AppLabel, "", pod_name, podMisc.NodeName, podUsage.CPU.Value, podUsage.Memory.Value, podMisc.Shard)
 	if err != nil {
 		fmt.Println("Error inserting pod details into the database:", err)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
@@ -58,8 +58,8 @@ func (pg *persistence_pg) InsertPod(pod_name, namespace string, podMisc *model.P
 // This function inserts the details of a node into the database
 // price_per_hour to be added to the function argument and to the query once it is actually defined
 func (pg *persistence_pg) InsertNode(node_name string, nodeMisc *model.NodeMisc) error {
-	_, err := pg.db_connection.Exec("INSERT INTO klustercost.tbl_nodes(node_name, node_mem, node_cpu, node_uid, labels, price_per_hour) VALUES($1, $2, $3, $4, $5, NULLIF($6,''))",
-		node_name, nodeMisc.Memory, nodeMisc.CPU, nodeMisc.UID, nodeMisc.Labels, "")
+	_, err := pg.db_connection.Exec("CALL add_node($1, $2, $3)",
+		node_name, nodeMisc.Memory, nodeMisc.CPU)
 	if err != nil {
 		fmt.Println("Error inserting node details into the database:", err)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)

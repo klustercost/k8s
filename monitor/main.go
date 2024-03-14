@@ -11,6 +11,8 @@ import (
 	"klustercost/monitor/pkg/signals"
 	"klustercost/monitor/pkg/version"
 
+	prometheusApi "github.com/prometheus/client_golang/api"
+
 	controller "klustercost/monitor/controllers"
 
 	"github.com/go-logr/logr"
@@ -20,7 +22,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
-	metricsv "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
 var controllers []observer.Controller
@@ -63,10 +64,15 @@ func main() {
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
-	//Get resources from the metrics server
-	metricsClientset, err := metricsv.NewForConfig(config)
+	prometheusaddress := env.PrometheusServer
+
+	if len(prometheusaddress) == 0 {
+		prometheusaddress = "http://prometheus-server.monitoring.svc.cluster.local:8080"
+	}
+
+	prometheusclient, err := prometheusApi.NewClient(prometheusApi.Config{Address: prometheusaddress})
 	if err != nil {
-		logger.Error(err, "Error connecting to the metrics server")
+		logger.Error(err, "Error creating prometheus api client")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
@@ -75,7 +81,7 @@ func main() {
 	// Create the controllers
 	// All new controllers to be initialized from here
 	controllers = append(controllers,
-		controller.NewController(ctx, metricsClientset, kubeClient, kubeInformerFactory),
+		controller.NewController(ctx, kubeClient, prometheusclient, kubeInformerFactory),
 		controller.NewNodeController(ctx, kubeClient, kubeInformerFactory),
 		controller.NewAppController(ctx, kubeClient, kubeInformerFactory),
 		controller.NewServiceController(ctx, kubeClient, kubeInformerFactory),
