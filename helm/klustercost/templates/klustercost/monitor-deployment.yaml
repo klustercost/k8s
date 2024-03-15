@@ -30,6 +30,8 @@ spec:
               value: {{ .Release.Name }}-postgres-service.{{ .Release.Namespace }}.svc.cluster.local
             - name: PG_DB_PORT
               value: "{{ printf "%v" .Values.postgresql.port }}"
+            - name: PROMETHEUS_SERVER
+              value: "{{ .Values.prometheus.prometheusServerAddress }}"
           resources:
             limits:
               cpu: '1'
