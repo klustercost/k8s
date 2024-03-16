@@ -10,8 +10,8 @@ import (
 // It is used to insert data into the database
 // Used by node-controller.go
 type NodeMisc struct {
-	Memory int64
-	CPU    int64
+	Memory float64
+	CPU    float64
 	UID    string
 	Labels string
 }

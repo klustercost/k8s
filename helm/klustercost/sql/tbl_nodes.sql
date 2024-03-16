@@ -1,20 +1,19 @@
 CREATE SCHEMA IF NOT EXISTS klustercost;
 CREATE TABLE klustercost.tbl_nodes (
     idx serial PRIMARY KEY,
-    node VARCHAR (100),
-    mem VARCHAR (100),
-    cpu VARCHAR (100),
-    price_per_hour VARCHAR (100)
+    node character varying (100),
+    mem double precision,
+    cpu double precision,
+    price_per_hour double precision
 );
 
 
 CREATE OR REPLACE PROCEDURE add_node(
-    arg_node VARCHAR(100),
-    arg_mem VARCHAR(100),
-    arg_cpu VARCHAR(100)
-)
-language plpgsql
-as $$
+	IN arg_node character varying,
+	IN arg_mem double precision,
+	IN arg_cpu double precision)
+LANGUAGE 'plpgsql'
+AS $$
 declare
   node_exists INTEGER;
 begin
@@ -24,4 +23,5 @@ begin
     VALUES (arg_node, arg_mem, arg_cpu);
   END IF;
 -- stored procedure body
-end; $$
+end; 
+$$;

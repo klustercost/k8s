@@ -1,28 +1,27 @@
 CREATE SCHEMA IF NOT EXISTS klustercost;
 CREATE TABLE klustercost.tbl_pods (
     idx serial PRIMARY KEY,
-    time TIMESTAMP WITHOUT TIME ZONE,
-    namespace VARCHAR (100),
-    app VARCHAR (100),
-    service VARCHAR (100),
-    pod VARCHAR (100),
-    node VARCHAR (10000),
-    cpu VARCHAR (100),
-    mem VARCHAR (100),
-    shard VARCHAR (100)
+    "time" timestamp without time zone,
+    namespace character varying(100),
+    app character varying(100),
+    service character varying(100),
+    pod character varying(100),
+    node character varying(10000),
+    cpu double precision,
+    mem double precision,
+    shard integer
 );
 
 CREATE OR REPLACE PROCEDURE klustercost.register_pod(
-    IN arg_time TIMESTAMP WITHOUT TIME ZONE,
-    IN arg_namespace VARCHAR(100),
-    IN arg_app VARCHAR(100),
-    IN arg_service VARCHAR(100),
-    IN arg_pod VARCHAR(100),
-    IN arg_node VARCHAR(10000),
-    IN arg_cpu VARCHAR(100),
-    IN arg_mem VARCHAR(100),
-    IN arg_shard VARCHAR(100)
-)
+	IN arg_time timestamp without time zone,
+	IN arg_namespace character varying,
+	IN arg_app character varying,
+	IN arg_service character varying,
+	IN arg_pod character varying,
+	IN arg_node character varying,
+	IN arg_cpu double precision,
+	IN arg_mem double precision,
+	IN arg_shard integer)
 LANGUAGE 'plpgsql'
 AS $$
 BEGIN

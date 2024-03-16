@@ -158,8 +158,8 @@ func (nc *NodeController) getNodeMiscellaneous(name string) *model.NodeMisc {
 
 	nodeMisc := &model.NodeMisc{}
 
-	nodeMisc.Memory = node.Status.Capacity.Memory().Value()
-	nodeMisc.CPU = node.Status.Capacity.Cpu().Value()
+	nodeMisc.Memory = float64(node.Status.Capacity.Memory().Value()) / 1024 / 1024
+	nodeMisc.CPU = float64(node.Status.Capacity.Cpu().Value())
 	nodeMisc.UID = string(node.ObjectMeta.UID)
 	nodeMisc.Labels = NodeLabelSelector(node.Labels)
 
