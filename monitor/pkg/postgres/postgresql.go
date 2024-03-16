@@ -44,7 +44,7 @@ func (pg *persistence_pg) Close() {
 // This function inserts the details of a pod into the database
 
 func (pg *persistence_pg) InsertPod(pod_name, namespace string, podMisc *model.PodMisc, ownerRef *model.OwnerReferences, podUsage *model.PodConsumption) error {
-	_, err := pg.db_connection.Exec("CALL klustercost.register_pod($1, $2, $3, NULLIF($4,''), $5, NULLIF($6,''), NULLIF($7,''),NULLIF($8,''), NULLIF($9,''))",
+	_, err := pg.db_connection.Exec("CALL klustercost.register_pod($1, $2, $3, NULLIF($4,''), $5, NULLIF($6,''), $7, $8, $9)",
 		podMisc.RecordTime, namespace, podMisc.AppLabel, "", pod_name, podMisc.NodeName, podUsage.CPU.Value, podUsage.Memory.Value, podMisc.Shard)
 	if err != nil {
 		fmt.Println("Error inserting pod details into the database:", err)
