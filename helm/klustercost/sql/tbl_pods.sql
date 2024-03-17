@@ -30,7 +30,7 @@ BEGIN
         delay CHAR(128);
         compare TIMESTAMP;
     BEGIN
-        SELECT 600 || ' seconds' INTO delay;
+        SELECT arg_shard || ' seconds' INTO delay;
         SELECT arg_time::TIMESTAMP - delay::INTERVAL INTO compare;
         SELECT COUNT(*) INTO pod_exists FROM klustercost.tbl_pods WHERE pod = arg_pod AND time > compare;
         IF pod_exists = 0 THEN
