@@ -1,0 +1,12 @@
+region,country,node
+Europe,Romania,aks-agentpool-71894719-vmss000001
+Europe,Romania,aks-agentpool-71894719-vmss000042
+Europe,Romania,aks-agentpool-71894719-vmss000000
+Europe,UK,aks-agentpool-71894719-vmss000046
+Europe,UK,aks-agentpool-71894719-vmss00003j
+North America,US,aks-agentpool-71894719-vmss000006
+North America,US,aks-agentpool-71894719-vmss000047
+North America,Canada,aks-agentpool-71894719-vmss000044
+North America,Canada,aks-agentpool-71894719-vmss000045
+North America,Mexico,aks-agentpool-71894719-vmss00004a
+Europe,Romania,docker-desktop
