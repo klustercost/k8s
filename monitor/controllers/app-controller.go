@@ -141,7 +141,7 @@ func (ac *AppController) runWorker(ctx context.Context) {
 	}
 }
 
-func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
+func (ac *AppController) processNextWorkItem(context.Context) bool {
 	obj, shutdown := ac.appqueue.Get()
 
 	if shutdown {
@@ -197,7 +197,7 @@ func (ac *AppController) processNextWorkItem(ctx context.Context) bool {
 
 // Returns owner_version, owner_kind, owner_name, owner_uid
 func ownerReferences(owner []metav1.OwnerReference) *model.OwnerReferences {
-
+	//TO DO - VALIDATE SOMETIME LATER
 	ownerRef := &model.OwnerReferences{}
 
 	for _, v := range owner {
@@ -221,37 +221,36 @@ func (ac *AppController) returnOwnerReferences(namespace, name string) *model.Ap
 	appOwnerReference := &model.AppOwnerReferences{}
 	//record_time is the time when the function is run
 	//It is used as a timestamp for the time when data was insterted in the database
-	recordTime := time.Now()
+
 	if ds, err := ac.dsLister.DaemonSets(namespace).Get(name); err == nil {
 		owner := ds.GetObjectMeta()
-		appOwnerReference = defineOwnerDetails(owner, recordTime, "DaemonSet")
+		appOwnerReference = defineOwnerDetails(owner, "DaemonSet")
 		return appOwnerReference
 	}
 	if deploy, err := ac.deployLister.Deployments(namespace).Get(name); err == nil {
 		owner := deploy.GetObjectMeta()
-		appOwnerReference = defineOwnerDetails(owner, recordTime, "Deployment")
+		appOwnerReference = defineOwnerDetails(owner, "Deployment")
 		return appOwnerReference
 	}
 	if sSet, err := ac.sSetLister.StatefulSets(namespace).Get(name); err == nil {
 		owner := sSet.GetObjectMeta()
-		appOwnerReference = defineOwnerDetails(owner, recordTime, "StatefulSet")
+		appOwnerReference = defineOwnerDetails(owner, "StatefulSet")
 		return appOwnerReference
 	}
 	if rSet, err := ac.rSetLister.ReplicaSets(namespace).Get(name); err == nil {
 		owner := rSet.GetObjectMeta()
-		appOwnerReference = defineOwnerDetails(owner, recordTime, "ReplicaSet")
+		appOwnerReference = defineOwnerDetails(owner, "ReplicaSet")
 		return appOwnerReference
 	}
 	return nil
 }
 
-func defineOwnerDetails[T metav1.Object](k8sObj T, recordTime time.Time, kind string) *model.AppOwnerReferences {
+func defineOwnerDetails[T metav1.Object](k8sObj T, kind string) *model.AppOwnerReferences {
 	appOwnerReference := &model.AppOwnerReferences{}
 
 	owner := k8sObj.GetOwnerReferences()
 	ownerRef := ownerReferences(owner)
 
-	appOwnerReference.RecordTime = recordTime
 	appOwnerReference.OwnVersion = "apps/v1"
 	appOwnerReference.OwnKind = kind
 	appOwnerReference.OwnUid = string(k8sObj.GetUID())

@@ -78,7 +78,6 @@ func (nc *NodeController) Run(ctx context.Context, workers int) error {
 		go wait.UntilWithContext(ctx, nc.runWorker, time.Second)
 	}
 
-	//<-ctx.Done()
 	nc.logger.Info("Done")
 
 	return nil
@@ -91,7 +90,7 @@ func (nc *NodeController) runWorker(ctx context.Context) {
 }
 
 // processNextWorkItem processes items from the workqueue
-func (nc *NodeController) processNextWorkItem(ctx context.Context) bool {
+func (nc *NodeController) processNextWorkItem(context.Context) bool {
 	obj, shutdown := nc.nodequeue.Get()
 
 	if shutdown {

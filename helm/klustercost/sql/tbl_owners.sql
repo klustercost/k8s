@@ -3,7 +3,7 @@ CREATE TABLE klustercost.tbl_owners (
     idx serial PRIMARY KEY,
     name VARCHAR (100),
     namespace VARCHAR (100),
-    record_time VARCHAR (100),
+    record_time timestamp without time zone,
     own_version VARCHAR (100),
     own_kind VARCHAR (100),
     own_uid VARCHAR (255),
