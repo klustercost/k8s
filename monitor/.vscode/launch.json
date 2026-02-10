@@ -10,7 +10,7 @@
             "request": "launch",
             "mode": "debug",
             "trace": "trace",
-            "program": "${workspaceFolder}/observer",
+            "program": "${workspaceFolder}",
             "envFile": "${workspaceFolder}/config/env",
         }
     ]

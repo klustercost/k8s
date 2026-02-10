@@ -1,16 +1,26 @@
 CREATE SCHEMA IF NOT EXISTS klustercost;
 CREATE TABLE klustercost.tbl_pods (
     idx serial PRIMARY KEY,
-    "time" timestamp without time zone,
+    name character varying(100),
     namespace character varying(100),
-    app character varying(100),
-    service character varying(100),
-    pod character varying(100),
     node character varying(10000),
-    cpu double precision,
-    mem double precision,
-    shard integer
+    aki_name character varying(100),
+    aki_instance  character varying(100),
+    aki_version  character varying(100),
+    aki_part_of  character varying(100),
+    aki_managed_by  character varying(100)
 );
+
+CREATE TABLE klustercost.tbl_pod_usage (
+    idx serial PRIMARY KEY,
+    idx_pod integer NOT NULL REFERENCES klustercost.tbl_pods(idx),
+    recorded_at timestamp without time zone NOT NULL DEFAULT NOW(),
+    cpu double precision,
+    mem double precision
+);
+
+CREATE INDEX idx_pod_usage_pod ON klustercost.tbl_pod_usage(idx_pod);
+CREATE INDEX idx_pod_usage_time ON klustercost.tbl_pod_usage(recorded_at);
 
 CREATE OR REPLACE PROCEDURE klustercost.register_pod(
 	IN arg_time timestamp without time zone,

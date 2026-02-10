@@ -38,13 +38,18 @@ type OwnerReferences struct {
 // It is used to insert data into the database
 // Used by pod-controller.go
 type PodMisc struct {
-	RecordTime time.Time
-	OwnerName  string
-	OwnUid     string
-	Labels     string
-	NodeName   string
-	AppLabel   string
-	Shard      int
+	RecordTime   time.Time
+	OwnerName    string
+	OwnUid       string
+	Labels       string
+	NodeName     string
+	AppLabel     string
+	Shard        int
+	AkiName      *string
+	AkiInstance  *string
+	AkiVersion   *string
+	AkiPartOf    *string
+	AkiManagedBy *string
 }
 
 // record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels

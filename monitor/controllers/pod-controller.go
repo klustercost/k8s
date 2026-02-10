@@ -6,8 +6,6 @@ import (
 	"klustercost/monitor/pkg/env"
 	"klustercost/monitor/pkg/model"
 	"klustercost/monitor/pkg/persistence"
-	"klustercost/monitor/pkg/utils"
-	"strconv"
 	"time"
 
 	prometheusApi "github.com/prometheus/client_golang/api"
@@ -135,19 +133,14 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 		}
 
 		if pod.Status.Phase == v1.PodRunning {
-			ownerRef := c.returnOwnerReferences(pod)
+
 			podMisc := c.getPodMiscellaneous(pod)
 			if err != nil {
 				c.logger.Error(err, "Unable to get pod miscellaneous")
 				return nil
 			}
-			//Returns the memory and CPU usage of the pod
-			podUsage, err := c.getPromData(ctx, namespace, name, strconv.Itoa(e.ResyncTime))
-			if err != nil {
-				return err
-			}
 
-			err = persistence.GetPersistInterface().InsertPod(name, namespace, podMisc, ownerRef, podUsage)
+			err = persistence.GetPersistInterface().InsertPod(name, namespace, podMisc)
 
 			if err != nil {
 				c.podqueue.AddRateLimited(obj)
@@ -199,6 +192,14 @@ func (c *PodController) returnOwnerReferences(pod *v1.Pod) *model.OwnerReference
 	return ownerRef
 }
 
+// This function returns a pointer to a string from a map of labels
+func stringPtrFromLabel(labels map[string]string, key string) *string {
+	if v, ok := labels[key]; ok {
+		return &v
+	}
+	return nil
+}
+
 // This function retrieves the record_time, owner_uid, own_uid, labels node_name
 // It queries the API server
 func (c *PodController) getPodMiscellaneous(pod *v1.Pod) *model.PodMisc {
@@ -213,11 +214,13 @@ func (c *PodController) getPodMiscellaneous(pod *v1.Pod) *model.PodMisc {
 			misc.OwnerName = string(v.UID)
 		}
 	}
-	misc.OwnUid = string(pod.ObjectMeta.UID)
 	misc.NodeName = pod.Spec.NodeName
-	misc.Labels = utils.MapToString(pod.ObjectMeta.Labels)
-	misc.AppLabel = utils.FindAppLabel(pod.ObjectMeta.Labels)
-	misc.Shard = e.ResyncTime
+	labels := pod.ObjectMeta.Labels
+	misc.AkiName = stringPtrFromLabel(labels, "app.kubernetes.io/name")
+	misc.AkiInstance = stringPtrFromLabel(labels, "app.kubernetes.io/instance")
+	misc.AkiVersion = stringPtrFromLabel(labels, "app.kubernetes.io/version")
+	misc.AkiPartOf = stringPtrFromLabel(labels, "app.kubernetes.io/part-of")
+	misc.AkiManagedBy = stringPtrFromLabel(labels, "app.kubernetes.io/managed-by")
 
 	return misc
 

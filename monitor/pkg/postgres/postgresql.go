@@ -43,15 +43,20 @@ func (pg *persistence_pg) Close() {
 
 // This function inserts the details of a pod into the database
 
-func (pg *persistence_pg) InsertPod(pod_name, namespace string, podMisc *model.PodMisc, ownerRef *model.OwnerReferences, podUsage *model.PodConsumption) error {
-	_, err := pg.db_connection.Exec("CALL klustercost.register_pod($1, $2, $3, NULLIF($4,''), $5, NULLIF($6,''), $7, $8, $9)",
-		podMisc.RecordTime, namespace, podMisc.AppLabel, "", pod_name, podMisc.NodeName, podUsage.CPU.Value, podUsage.Memory.Value, podMisc.Shard)
+func (pg *persistence_pg) InsertPod(pod_name, namespace string, podMisc *model.PodMisc) error {
+	_, err := pg.db_connection.Exec(
+		`INSERT INTO klustercost.tbl_pods(name, namespace, node, aki_name, aki_instance, aki_version, aki_part_of, aki_managed_by)
+		 VALUES($1, $2, $3, $4, $5, $6, $7, $8)`,
+		pod_name, namespace, podMisc.NodeName,
+		podMisc.AkiName, podMisc.AkiInstance, podMisc.AkiVersion,
+		podMisc.AkiPartOf, podMisc.AkiManagedBy,
+	)
 	if err != nil {
 		fmt.Println("Error inserting pod details into the database:", err)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		return err
 	}
-	fmt.Println("INSERTED POD:", pod_name, namespace, "memory usage", podUsage.Memory, "CPU usage", podUsage.CPU, "owner", ownerRef.OwnerName, "node", podMisc.NodeName)
+	fmt.Println("INSERTED POD:", pod_name, namespace, "node", podMisc.NodeName)
 	return nil
 }
 
