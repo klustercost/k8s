@@ -43,27 +43,20 @@ CREATE OR REPLACE PROCEDURE klustercost.register_pod_data(
 	IN "arg.app.part-of" character varying DEFAULT NULL::character varying,
 	IN "arg.app.managed-by" character varying DEFAULT NULL::character varying)
 LANGUAGE 'plpgsql'
-AS $BODY$
-	#variable_conflict use_column
-    DECLARE	
-		pod_id INTEGER;
-		delay CHAR(128);
-        compare timestamp;
-		sample_count INTEGER;
-	BEGIN
-		SELECT idx INTO pod_id FROM klustercost.tbl_pods WHERE "arg.name" = tbl_pods.name;
-		IF pod_id IS NULL THEN
-			INSERT INTO klustercost.tbl_pods (name, namespace, node, "app.name")
-			VALUES ("arg.name", "arg.namespace", "arg.node", "arg.app.name");
-			SELECT idx INTO pod_id FROM klustercost.tbl_pods WHERE "arg.name" = klustercost.tbl_pods.name;
-		END IF;
-	
-        SELECT 600 || ' seconds' INTO delay;
-        SELECT now() - delay::INTERVAL INTO compare;
-        SELECT COUNT(*) INTO sample_count FROM klustercost.tbl_pod_data WHERE idx_pod = pod_id AND timestamp > compare;
-        IF sample_count = 0 THEN
-            INSERT INTO klustercost.tbl_pod_data (idx_pod, cpu, mem)
-            VALUES (pod_id, "arg.cpu", "arg.mem");
-        END IF;	
-	END;
-$BODY$;
+AS $$
+BEGIN
+    DECLARE
+        pod_exists INTEGER;
+        delay CHAR(128);
+        compare TIMESTAMP;
+    BEGIN
+        SELECT arg_shard || ' seconds' INTO delay;
+        SELECT arg_time::TIMESTAMP - delay::INTERVAL INTO compare;
+        SELECT COUNT(*) INTO pod_exists FROM klustercost.tbl_pods WHERE pod = arg_pod AND time > compare;
+        IF pod_exists = 0 THEN
+            INSERT INTO klustercost.tbl_pods (time, namespace, app, service, pod, node, cpu, mem, shard)
+            VALUES (arg_time, arg_namespace, arg_app, arg_service, arg_pod, arg_node, arg_cpu, arg_mem, arg_shard);
+        END IF;
+    END;
+END;
+$$;

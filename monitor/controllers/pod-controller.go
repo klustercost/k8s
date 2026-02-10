@@ -127,7 +127,7 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 			return nil
 		}
 
-		//Returns the pod and the pod metrics objects
+		//Returns the pod objects
 		pod, err := c.initPodCollector(namespace, name)
 		if err != nil {
 			c.logger.Error(err, "Unable to init pod collector ")
@@ -228,7 +228,7 @@ func (c *PodController) getPromData(ctx context.Context, namespace string, servi
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	results := &model.PodConsumption{}
+	result := &model.PodConsumption{}
 
 	mem_result_ws, _, err := c.prometheusapi.Query(ctx, c.returnMemory(namespace, "container_memory_working_set_bytes", service, timeRange), time.Now(), prometheusv1.WithTimeout(5*time.Second))
 	if err != nil {
@@ -261,14 +261,14 @@ func (c *PodController) getPromData(ctx context.Context, namespace string, servi
 	}
 
 	if vector_mem_result_rss[0].Value < vector_mem_result_ws[0].Value {
-		results.Memory = vector_mem_result_ws[0]
+		result.Memory = vector_mem_result_ws[0]
 	} else {
-		results.Memory = vector_mem_result_rss[0]
+		result.Memory = vector_mem_result_rss[0]
 	}
 
-	results.CPU = vector_cpu_result[0]
+	result.CPU = vector_cpu_result[0]
 
-	return results, nil
+	return result, nil
 }
 
 func (c *PodController) returnMemory(namespace string, metric string, pod string, timeRange string) string {

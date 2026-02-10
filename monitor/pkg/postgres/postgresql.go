@@ -70,11 +70,11 @@ func (pg *persistence_pg) InsertNode(node_name string, nodeMisc *model.NodeMisc)
 }
 
 // This function inserts the details of an owner into the database
-// func InsertOwner(name string, namespace string, record_time time.Time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels string) error {
+// func InsertOwner(name string, namespace string, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels string) error {
 func (pg *persistence_pg) InsertOwner(name string, namespace string, allRef *model.AppOwnerReferences) error {
 
-	_, err := pg.db_connection.Exec("INSERT INTO klustercost.tbl_owners(name, namespace, record_time, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels) VALUES($1, $2, $3, $4, $5, NULLIF($6,''), NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), NULLIF($10,''), NULLIF($11,''))",
-		name, namespace, allRef.RecordTime, allRef.OwnVersion, allRef.OwnKind, allRef.OwnerUid, allRef.OwnerVersion, allRef.OwnKind, allRef.OwnerName, allRef.OwnerUid, allRef.Labels)
+	_, err := pg.db_connection.Exec("INSERT INTO klustercost.tbl_owners(name, namespace,  own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels) VALUES($1, $2, $3, $4, NULLIF($5,''), NULLIF($6,''), NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), NULLIF($10,''))",
+		name, namespace, allRef.OwnVersion, allRef.OwnKind, allRef.OwnerUid, allRef.OwnerVersion, allRef.OwnKind, allRef.OwnerName, allRef.OwnerUid, allRef.Labels)
 	if err != nil {
 		fmt.Println("Error inserting owner details into the database:", err)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
