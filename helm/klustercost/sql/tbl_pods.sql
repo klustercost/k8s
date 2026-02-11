@@ -53,8 +53,8 @@ AS $BODY$
 	BEGIN
 		SELECT idx INTO pod_id FROM klustercost.tbl_pods WHERE "arg.name" = tbl_pods.name;
 		IF pod_id IS NULL THEN
-			INSERT INTO klustercost.tbl_pods (name, namespace, node, "app.name")
-			VALUES ("arg.name", "arg.namespace", "arg.node", "arg.app.name");
+			INSERT INTO klustercost.tbl_pods   (name, namespace, node, "app.name", "app.instance", "app.version", "app.component", "app.part-of", "app.managed-by")
+			VALUES ("arg.name", "arg.namespace", "arg.node", "arg.app.name", "arg.app.instance", "arg.app.version", "arg.app.component", "arg.app.part-of", "arg.app.managed-by");
 			SELECT idx INTO pod_id FROM klustercost.tbl_pods WHERE "arg.name" = klustercost.tbl_pods.name;
 		END IF;
 	
