@@ -2,7 +2,7 @@ CREATE SCHEMA IF NOT EXISTS klustercost;
 
 CREATE TABLE IF NOT EXISTS klustercost.tbl_pods
 (
-    idx integer NOT NULL DEFAULT nextval('tbl_pods_idx_seq'::regclass),
+    idx integer NOT NULL DEFAULT nextval('klustercost.tbl_pods_idx_seq'::regclass),
     name character varying(63) COLLATE pg_catalog."default",
     namespace character varying(253) COLLATE pg_catalog."default",
     node character varying(253) COLLATE pg_catalog."default",
@@ -13,11 +13,11 @@ CREATE TABLE IF NOT EXISTS klustercost.tbl_pods
     "app.part-of" character varying(63) COLLATE pg_catalog."default",
     "app.managed-by" character varying(63) COLLATE pg_catalog."default",
     CONSTRAINT tbl_pods_pkey PRIMARY KEY (idx)
-)
+);
 
 CREATE TABLE IF NOT EXISTS klustercost.tbl_pod_data
 (
-    idx integer NOT NULL DEFAULT nextval('tbl_pod_data_idx_seq'::regclass),
+    idx integer NOT NULL DEFAULT nextval('klustercost.tbl_pod_data_idx_seq'::regclass),
     idx_pod integer NOT NULL,
     "timestamp" timestamp without time zone NOT NULL DEFAULT now(),
     cpu double precision NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS klustercost.tbl_pod_data
         ON UPDATE NO ACTION
         ON DELETE NO ACTION
         NOT VALID
-)
+);
 
 CREATE OR REPLACE PROCEDURE klustercost.register_pod_data(
 	IN "arg.name" character varying,
