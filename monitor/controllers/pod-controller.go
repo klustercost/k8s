@@ -6,7 +6,6 @@ import (
 	"klustercost/monitor/pkg/env"
 	"klustercost/monitor/pkg/model"
 	"klustercost/monitor/pkg/persistence"
-	"klustercost/monitor/pkg/utils"
 	"strconv"
 	"time"
 
@@ -135,19 +134,14 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 		}
 
 		if pod.Status.Phase == v1.PodRunning {
-			ownerRef := c.returnOwnerReferences(pod)
-			podMisc := c.getPodMiscellaneous(pod)
-			if err != nil {
-				c.logger.Error(err, "Unable to get pod miscellaneous")
-				return nil
-			}
+			appLabels := c.getAppLabels(pod)
 			//Returns the memory and CPU usage of the pod
 			podUsage, err := c.getPromData(ctx, namespace, name, strconv.Itoa(e.ResyncTime))
 			if err != nil {
 				return err
 			}
 
-			err = persistence.GetPersistInterface().InsertPod(name, namespace, podMisc, ownerRef, podUsage)
+			err = persistence.GetPersistInterface().InsertPod(name, namespace, pod.Spec.NodeName, podUsage, appLabels)
 
 			if err != nil {
 				c.podqueue.AddRateLimited(obj)
@@ -199,28 +193,18 @@ func (c *PodController) returnOwnerReferences(pod *v1.Pod) *model.OwnerReference
 	return ownerRef
 }
 
-// This function retrieves the record_time, owner_uid, own_uid, labels node_name
-// It queries the API server
-func (c *PodController) getPodMiscellaneous(pod *v1.Pod) *model.PodMisc {
-	misc := &model.PodMisc{}
-	//record_time is the time when the function is run
-	//It is used as a timestamp for the time when data was insterted in the database
-	misc.RecordTime = time.Now()
-	owner := pod.ObjectMeta.OwnerReferences
-
-	for _, v := range owner {
-		if v.Name != "" {
-			misc.OwnerName = string(v.UID)
-		}
+// getAppLabels extracts the Kubernetes recommended app labels from a pod.
+// These are passed to the klustercost.register_pod_data stored procedure.
+func (c *PodController) getAppLabels(pod *v1.Pod) *model.PodAppLabels {
+	labels := pod.ObjectMeta.Labels
+	return &model.PodAppLabels{
+		Name:      labels["app.kubernetes.io/name"],
+		Instance:  labels["app.kubernetes.io/instance"],
+		Version:   labels["app.kubernetes.io/version"],
+		Component: labels["app.kubernetes.io/component"],
+		PartOf:    labels["app.kubernetes.io/part-of"],
+		ManagedBy: labels["app.kubernetes.io/managed-by"],
 	}
-	misc.OwnUid = string(pod.ObjectMeta.UID)
-	misc.NodeName = pod.Spec.NodeName
-	misc.Labels = utils.MapToString(pod.ObjectMeta.Labels)
-	misc.AppLabel = utils.FindAppLabel(pod.ObjectMeta.Labels)
-	misc.Shard = e.ResyncTime
-
-	return misc
-
 }
 
 func (c *PodController) getPromData(ctx context.Context, namespace string, service string, timeRange string) (*model.PodConsumption, error) {

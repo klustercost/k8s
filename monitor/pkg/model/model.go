@@ -71,3 +71,15 @@ type ServiceMisc struct {
 	Labels     string
 	Selector   string
 }
+
+// PodAppLabels contains the Kubernetes recommended app labels for a pod.
+// These map to the procedure parameters in klustercost.register_pod_data.
+// Used by pod-controller.go
+type PodAppLabels struct {
+	Name      string // app.kubernetes.io/name
+	Instance  string // app.kubernetes.io/instance
+	Version   string // app.kubernetes.io/version
+	Component string // app.kubernetes.io/component
+	PartOf    string // app.kubernetes.io/part-of
+	ManagedBy string // app.kubernetes.io/managed-by
+}
