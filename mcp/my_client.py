@@ -11,4 +11,4 @@ async def call_tool(name: str, args: dict):
 
 
 # Example: ask a natural-language question about the database
-asyncio.run(call_tool("ask_db", {"question": "Show me all tables and their row counts"}))
+asyncio.run(call_tool("ask_db", {"question": "Which pod consumed the most CPU in the last 1 hour?"}))

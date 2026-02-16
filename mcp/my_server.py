@@ -10,7 +10,7 @@ load_dotenv()
 # --- Configuration from .env ---
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PG_HOST = os.getenv("PG_HOST", "localhost")
-PG_PORT = os.getenv("PG_PORT", "5432")
+PG_PORT = int(os.getenv("PG_PORT", "5432"))
 PG_USER = os.getenv("PG_USER", "postgres")
 PG_PASSWORD = os.getenv("PG_PASSWORD", "")
 PG_DATABASE = os.getenv("PG_DATABASE", "postgres")
@@ -32,8 +32,9 @@ def get_pg_connection():
 
 def get_schema_info() -> str:
     """Fetch table and column metadata from information_schema."""
-    conn = get_pg_connection()
+    conn = None
     try:
+        conn = get_pg_connection()
         with conn.cursor() as cur:
             cur.execute(
                 """
@@ -46,7 +47,8 @@ def get_schema_info() -> str:
             )
             rows = cur.fetchall()
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
     tables: dict[str, list[str]] = {}
     for table, column, dtype in rows:
@@ -66,10 +68,21 @@ def generate_sql(question: str, schema: str) -> str:
             {
                 "role": "system",
                 "content": (
-                    "You are a SQL assistant. Given the database schema below, "
-                    "write a single PostgreSQL SELECT query that answers the "
-                    "user's question. Return ONLY the raw SQL — no markdown, "
-                    "no explanation, no code fences.\n\n"
+                    "You are a SQL assistant for a Kubernetes cluster monitoring system.\n\n"
+                    "Domain context:\n"
+                    "- tbl_pods contains metadata about pods running in the cluster "
+                    "(name, namespace, node, app labels, etc.).\n"
+                    "- tbl_pod_data contains time-series metrics collected every 10 minutes. "
+                    "Each row has a timestamp plus cpu and memory usage for one pod.\n"
+                    "- tbl_pod_data.idx_pod is a foreign key referencing tbl_pods.idx.\n"
+                    "- To get a pod's name alongside its metrics, JOIN tbl_pod_data ON "
+                    "tbl_pod_data.idx_pod = tbl_pods.idx.\n\n"
+                    "SQL rules:\n"
+                    "- Always double-quote column names that contain dots or hyphens "
+                    '(e.g. "app.name", "app.part-of").\n'
+                    "- Always qualify table names with the schema (e.g. klustercost.tbl_pods).\n"
+                    "- Write a single PostgreSQL SELECT query. No INSERT/UPDATE/DELETE.\n"
+                    "- Return ONLY the raw SQL — no markdown, no explanation, no code fences.\n\n"
                     f"Schema:\n{schema}"
                 ),
             },
@@ -77,28 +90,29 @@ def generate_sql(question: str, schema: str) -> str:
         ],
         temperature=0,
     )
-    return response.choices[0].message.content.strip()
+    content = response.choices[0].message.content
+    if content is None:
+        raise ValueError("OpenAI returned an empty response — no SQL was generated")
+    return content.strip()
 
 
 def run_query(sql: str) -> list[dict]:
     """Execute a SELECT query and return rows as list of dicts."""
-    conn = get_pg_connection()
+    conn = None
     try:
+        conn = get_pg_connection()
         with conn.cursor() as cur:
             cur.execute(sql)
+            if cur.description is None:
+                raise ValueError("Query returned no result set — only SELECT statements are supported")
             columns = [desc[0] for desc in cur.description]
             return [dict(zip(columns, row)) for row in cur.fetchall()]
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 # --- MCP Tools ---
-
-@mcp.tool
-def greet(name: str) -> str:
-    """Greet someone by name."""
-    return f"Hello, {name}!"
-
 
 @mcp.tool
 def ask_db(question: str) -> str:
@@ -107,12 +121,14 @@ def ask_db(question: str) -> str:
     The question is converted to SQL via OpenAI, executed, and the
     results are returned as JSON.
     """
-    schema = get_schema_info()
-    sql = generate_sql(question, schema)
+    sql = None
     try:
+        schema = get_schema_info()
+        sql = generate_sql(question, schema)
         rows = run_query(sql)
     except Exception as e:
-        return f"SQL error: {e}\nGenerated SQL was:\n{sql}"
+        sql_info = f"\nGenerated SQL was:\n{sql}" if sql else ""
+        return f"Error: {e}{sql_info}"
     return json.dumps(rows, indent=2, default=str)
 
 
