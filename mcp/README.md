@@ -16,7 +16,6 @@ mcp/
 ├── .gitignore
 ├── requirements.txt    # Python dependencies
 ├── my_server.py        # The MCP server (runs the tools)
-├── my_client.py        # A simple client to call the server
 └── README.md           # You are here
 ```
 
@@ -50,12 +49,12 @@ Open the `.env` file and replace the placeholder values with your real credentia
 OPENAI_API_KEY=sk-proj-...your-real-key...
 
 # PostgreSQL
-PG_HOST=localhost
+PG_HOST=your-host
 PG_PORT=5432
 PG_USER=postgres
 PG_PASSWORD=your-password
-PG_DATABASE=your-database
-PG_SCHEMA=public
+PG_DATABASE=klustercost
+PG_SCHEMA=klustercost
 ```
 
 | Variable         | Description                                      | Default     |
@@ -70,9 +69,7 @@ PG_SCHEMA=public
 
 ## Running
 
-You need **two terminals** (both with the virtual environment activated).
-
-### Terminal 1 -- Start the server
+Start the server (with the virtual environment activated):
 
 ```bash
 python my_server.py
@@ -80,35 +77,25 @@ python my_server.py
 
 The server starts on `http://127.0.0.1:8000/mcp` and waits for connections.
 
-### Terminal 2 -- Query the database
-
-```bash
-python my_client.py
-```
-
-By default this asks: *"Show me all tables and their row counts"*. You can edit the question at the bottom of `my_client.py` to ask anything you want:
-
-```python
-asyncio.run(call_tool("ask_db", {"question": "Your question here"}))
-```
+Any MCP-compatible client (Cursor, Claude Desktop, etc.) can then connect to that URL and call the `ask_db` tool.
 
 ## Example Questions
 
 You write plain English -- the system figures out the SQL for you. Here are some examples to get you started:
 
 ```
-"Show me all tables and their row counts"
-"What columns does the orders table have?"
-"What are the top 10 customers by total spend?"
-"How many records were created in the last 7 days?"
-"What is the average value in the metrics table grouped by name?"
+"Which pod consumed the most CPU in the last 1 hour?"
+"Show me the average memory usage per namespace"
+"What are the top 5 pods by CPU usage today?"
+"List all pods in the default namespace"
+"How many data points were recorded in the last 24 hours?"
 ```
 
 You do **not** need to know the exact table or column names. The server reads the database schema automatically and sends it to OpenAI so it can generate the correct query.
 
 ## How It Works
 
-1. **You** send a plain English question to the `ask_db` tool via the MCP client.
+1. **You** send a plain English question to the `ask_db` tool via any MCP-compatible client.
 2. **The server** connects to PostgreSQL and reads the schema -- all table names, column names, and data types for the configured schema.
 3. **The server** sends the schema and your question to OpenAI (`gpt-4o-mini`), which generates a `SELECT` SQL query.
 4. **The server** executes the SQL against PostgreSQL.
@@ -118,19 +105,21 @@ You do **not** need to know the exact table or column names. The server reads th
  You (question)
   │
   ▼
- MCP Client  ──HTTP──►  MCP Server
-                            │
-                  ┌─────────┼─────────┐
-                  ▼                    ▼
-             PostgreSQL            OpenAI
-           (read schema)     (generate SQL)
-                  │                    │
-                  └────────┬───────────┘
-                           ▼
-                   Execute SQL query
-                           │
-                           ▼
-                  Return JSON results
+ MCP Client (Cursor, Claude Desktop, etc.)
+  │
+  ──── HTTP ────►  MCP Server
+                       │
+             ┌─────────┼─────────┐
+             ▼                    ▼
+        PostgreSQL            OpenAI
+      (read schema)     (generate SQL)
+             │                    │
+             └────────┬───────────┘
+                      ▼
+              Execute SQL query
+                      │
+                      ▼
+             Return JSON results
 ```
 
 ## Troubleshooting
@@ -138,7 +127,7 @@ You do **not** need to know the exact table or column names. The server reads th
 | Problem | Fix |
 | ------- | --- |
 | `ModuleNotFoundError: No module named 'fastmcp'` | Make sure you activated the virtual environment before running |
-| `connection refused` on the client | Make sure the server is running in another terminal first |
+| `connection refused` from the MCP client | Make sure the server is running first |
 | `FATAL: password authentication failed` | Check `PG_USER` and `PG_PASSWORD` in `.env` |
 | `FATAL: database "..." does not exist` | Check `PG_DATABASE` in `.env` |
 | OpenAI `AuthenticationError` | Check that `OPENAI_API_KEY` in `.env` is valid |

@@ -9,12 +9,13 @@ load_dotenv()
 
 # --- Configuration from .env ---
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 PG_HOST = os.getenv("PG_HOST", "localhost")
 PG_PORT = int(os.getenv("PG_PORT", "5432"))
 PG_USER = os.getenv("PG_USER", "postgres")
 PG_PASSWORD = os.getenv("PG_PASSWORD", "")
-PG_DATABASE = os.getenv("PG_DATABASE", "postgres")
-PG_SCHEMA = os.getenv("PG_SCHEMA", "public")
+PG_DATABASE = os.getenv("PG_DATABASE", "klustercost")
+PG_SCHEMA = os.getenv("PG_SCHEMA", "klustercost")
 
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
 mcp = FastMCP("My MCP Server")
@@ -63,7 +64,7 @@ def get_schema_info() -> str:
 def generate_sql(question: str, schema: str) -> str:
     """Ask OpenAI to produce a read-only SQL query for the given question."""
     response = openai_client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=OPENAI_MODEL,
         messages=[
             {
                 "role": "system",
