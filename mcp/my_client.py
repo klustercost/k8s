@@ -7,8 +7,10 @@ client = Client("http://localhost:8000/mcp")
 async def ask(question: str):
     async with client:
         result = await client.call_tool("ask_db", {"question": question})
-        print(result)
-
+        if result.is_error:
+            print(f"Error: {result.data}")
+        else:
+            print(result.data)
 
 def main():
     print("Connected to MCP server at http://localhost:8000/mcp")
