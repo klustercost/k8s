@@ -7,6 +7,11 @@ from fastmcp import FastMCP
 
 load_dotenv()
 
+# System prompt file
+PROMPT_FILE = os.path.join(os.path.dirname(__file__), "system_prompt.txt")
+with open(PROMPT_FILE, encoding="utf-8") as f:
+    SYSTEM_PROMPT_TEMPLATE = f.read()
+
 # --- Configuration from .env ---
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
@@ -66,27 +71,7 @@ def generate_sql(question: str, schema: str) -> str:
     response = openai_client.chat.completions.create(
         model=OPENAI_MODEL,
         messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are a SQL assistant for a Kubernetes cluster monitoring system.\n\n"
-                    "Domain context:\n"
-                    "- tbl_pods contains metadata about pods running in the cluster "
-                    "(name, namespace, node, app labels, etc.).\n"
-                    "- tbl_pod_data contains time-series metrics collected every 10 minutes. "
-                    "Each row has a timestamp plus cpu and memory usage for one pod.\n"
-                    "- tbl_pod_data.idx_pod is a foreign key referencing tbl_pods.idx.\n"
-                    "- To get a pod's name alongside its metrics, JOIN tbl_pod_data ON "
-                    "tbl_pod_data.idx_pod = tbl_pods.idx.\n\n"
-                    "SQL rules:\n"
-                    "- Always double-quote column names that contain dots or hyphens "
-                    '(e.g. "app.name", "app.part-of").\n'
-                    "- Always qualify table names with the schema (e.g. klustercost.tbl_pods).\n"
-                    "- Write a single PostgreSQL SELECT query. No INSERT/UPDATE/DELETE.\n"
-                    "- Return ONLY the raw SQL — no markdown, no explanation, no code fences.\n\n"
-                    f"Schema:\n{schema}"
-                ),
-            },
+            {"role": "system", "content": SYSTEM_PROMPT_TEMPLATE.format(schema=schema)},
             {"role": "user", "content": question},
         ],
         temperature=0,
@@ -126,6 +111,8 @@ def ask_db(question: str) -> str:
     try:
         schema = get_schema_info()
         sql = generate_sql(question, schema)
+        if sql.strip() == "REFUSE":
+            return "Sorry, I can only answer questions about the Kubernetes cluster database."
         rows = run_query(sql)
     except Exception as e:
         sql_info = f"\nGenerated SQL was:\n{sql}" if sql else ""
