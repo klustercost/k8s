@@ -2,6 +2,8 @@
 
 This project runs a lightweight [MCP](https://modelcontextprotocol.io/) server that lets you ask plain English questions about a PostgreSQL database. Under the hood it uses OpenAI to translate your question into SQL, runs the query, and returns the results as JSON.
 
+Built with [FastMCP](https://github.com/jlowin/fastmcp), a Python framework that makes it easy to create MCP-compatible servers with minimal boilerplate.
+
 ## Prerequisites
 
 - **Python 3.10+**
@@ -16,6 +18,7 @@ mcp/
 ├── .gitignore
 ├── requirements.txt    # Python dependencies
 ├── my_server.py        # The MCP server (runs the tools)
+├── my_client.py        # Interactive terminal client
 └── README.md           # You are here
 ```
 
@@ -69,7 +72,9 @@ PG_SCHEMA=klustercost
 
 ## Running
 
-Start the server (with the virtual environment activated):
+You need **two terminals** (both with the virtual environment activated).
+
+### Terminal 1 -- Start the server
 
 ```bash
 python my_server.py
@@ -77,7 +82,32 @@ python my_server.py
 
 The server starts on `http://127.0.0.1:8000/mcp` and waits for connections.
 
-Any MCP-compatible client (Cursor, Claude Desktop, etc.) can then connect to that URL and call the `ask_db` tool.
+### Terminal 2 -- Query the database
+
+You have two options:
+
+**Option A: Interactive terminal client**
+
+```bash
+python my_client.py
+```
+
+This opens an interactive prompt where you type questions in plain English and get results back immediately:
+
+```
+Connected to MCP server at http://localhost:8000/mcp
+Type your question and press Enter. Type 'exit' to quit.
+
+Question: Which pod consumed the most CPU in the last 1 hour?
+[... JSON results ...]
+
+Question: exit
+Bye!
+```
+
+**Option B: MCP-compatible client**
+
+Any MCP-compatible client (Cursor, Claude Desktop, etc.) can connect to `http://127.0.0.1:8000/mcp` and call the `ask_db` tool directly.
 
 ## Example Questions
 
@@ -97,7 +127,7 @@ You do **not** need to know the exact table or column names. The server reads th
 
 1. **You** send a plain English question to the `ask_db` tool via any MCP-compatible client.
 2. **The server** connects to PostgreSQL and reads the schema -- all table names, column names, and data types for the configured schema.
-3. **The server** sends the schema and your question to OpenAI (`gpt-4o-mini`), which generates a `SELECT` SQL query.
+3. **The server** sends the schema and your question to OpenAI (`model-of-your-choice`), which generates a `SELECT` SQL query.
 4. **The server** executes the SQL against PostgreSQL.
 5. **You** receive the query results as JSON.
 

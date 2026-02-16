@@ -47,18 +47,18 @@ def get_schema_info() -> str:
                 (PG_SCHEMA,),
             )
             rows = cur.fetchall()
+
+        tables: dict[str, list[str]] = {}
+        for table, column, dtype in rows:
+            tables.setdefault(table, []).append(f"{column} ({dtype})")
+
+        lines = []
+        for table, cols in tables.items():
+            lines.append(f"{PG_SCHEMA}.{table}: {', '.join(cols)}")
+        return "\n".join(lines)
     finally:
         if conn is not None:
             conn.close()
-
-    tables: dict[str, list[str]] = {}
-    for table, column, dtype in rows:
-        tables.setdefault(table, []).append(f"{column} ({dtype})")
-
-    lines = []
-    for table, cols in tables.items():
-        lines.append(f"{PG_SCHEMA}.{table}: {', '.join(cols)}")
-    return "\n".join(lines)
 
 
 def generate_sql(question: str, schema: str) -> str:
