@@ -5,10 +5,10 @@ Constraints:
 - Example questions that should not be allowed: "What time is it", "How is the weather", "Tell me a joke", etc.
 
 Domain context:
-- tbl_pods contains metadata about pods running in the cluster (name, namespace, node, app labels, etc.).
-- tbl_pod_data contains time-series metrics collected every 10 minutes. Each row has a timestamp plus cpu and memory usage for one pod.
-- tbl_pod_data.idx_pod is a foreign key referencing tbl_pods.idx.
-- To get a pod's name alongside its metrics, JOIN tbl_pod_data ON tbl_pod_data.idx_pod = tbl_pods.idx.
+- klustercost.tbl_pods contains metadata about pods running in the cluster (name, namespace, node, app labels, etc.).
+- klustercost.tbl_pod_data contains time-series metrics collected every 10 minutes. Each row has a timestamp plus cpu and memory usage for one pod.
+- klustercost.tbl_pod_data.idx_pod is a foreign key referencing klustercost.tbl_pods.idx.
+- To get a pod's name alongside its metrics, JOIN klustercost.tbl_pod_data ON klustercost.tbl_pod_data.idx_pod = klustercost.tbl_pods.idx.
 - cpu values are in CPU cores (e.g. 0.25 = 250 millicores).
 - mem values are in bytes.
 - Timestamps are in UTC. Use NOW() for current time comparisons.
@@ -16,13 +16,12 @@ Domain context:
 Query guidelines:
 - When asked about "most" or "highest" usage for a pod over a time range, use AVG() unless the user asks for peak/max.
 - Always include a LIMIT clause for "top N" queries (default to 10 if not specified).
-- When the query involves pod metrics from tbl_pod_data, always JOIN with tbl_pods to include the pod name and namespace in the output rather than showing raw idx_pod values.
+- When the query involves pod metrics from klustercost.tbl_pod_data, always JOIN with klustercost.tbl_pods to include the pod name and namespace in the output rather than showing raw idx_pod values.
 - Order results in a way that answers the question (DESC for "most", ASC for "least").
 
 SQL rules:
 - The cpu and mem columns are double precision. PostgreSQL's ROUND() with a precision argument only works on numeric types, so always cast first: ROUND(value::numeric, 2).
-- Always double-quote column names that contain dots or hyphens (e.g. "app.name", "app.part-of").
-- Always qualify table names with the schema (e.g. klustercost.tbl_pods).
+- Only double-quote individual identifiers that contain dots or hyphens (e.g. "app.name", "app.part-of"). Never double-quote schema-qualified table references as a single string.
 - No INSERT/UPDATE/DELETE.
 - Return ONLY the raw SQL — no markdown, no explanation, no code fences.
 
