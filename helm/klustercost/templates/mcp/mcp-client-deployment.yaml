@@ -15,6 +15,10 @@ spec:
       labels:
         app: {{ .Release.Name }}-mcp-client
     spec:
+      {{- if .Values.imageRegistry.enabled }}
+      imagePullSecrets:
+        - name: {{ .Release.Name }}-registry-secret
+      {{- end }}
       containers:
         - name: mcp-client
           image: {{ .Values.mcp.client.image }}

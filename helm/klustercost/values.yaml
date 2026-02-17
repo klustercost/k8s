@@ -2,6 +2,13 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# --- Private container registry ---
+imageRegistry:
+  enabled: false
+  server: ""
+  username: ""
+  password: ""
+
 postgresql:
   enabled: true
   image: postgres:latest
@@ -35,7 +42,7 @@ mcp:
   imagePullPolicy: Always
 
   server:
-    image: your-registry/mcp-server:latest
+    image: klustercost/private:mcp-server-latest
     replicas: 1
     port: 8000
     resources:
@@ -47,7 +54,7 @@ mcp:
         memory: 512Mi
 
   client:
-    image: your-registry/mcp-client:latest
+    image: klustercost/private:mcp-client-latest
     resources:
       requests:
         cpu: 50m

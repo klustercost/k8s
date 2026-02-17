@@ -12,6 +12,10 @@ spec:
       labels:
         app: {{ .Release.Name }}-monitor
     spec:
+      {{- if .Values.imageRegistry.enabled }}
+      imagePullSecrets:
+        - name: {{ .Release.Name }}-registry-secret
+      {{- end }}
       containers:
         - name: {{ .Release.Name }}-monitor
           image: {{ .Values.monitor.image }}
