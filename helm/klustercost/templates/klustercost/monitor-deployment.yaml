@@ -24,18 +24,20 @@ spec:
               value: "{{ printf "%v" .Values.monitor.resyncTime }}"
             - name: CONTROLLER_WORKERS
               value: "{{ printf "%v" .Values.monitor.workers }}"
-            - name: PG_DB_USER
+            - name: user
               value: {{ .Values.postgresql.username }}
-            - name: PG_DB_PASS
+            - name: password
               value: {{ .Values.postgresql.password }}
-            - name: PG_DB_NAME
+            - name: database
               value: {{ .Values.postgresql.name }}
-            - name: PG_DB_HOST
+            - name: host
               value: {{ .Release.Name }}-postgres-service.{{ .Release.Namespace }}.svc.cluster.local
-            - name: PG_DB_PORT
+            - name: port
               value: "{{ printf "%v" .Values.postgresql.port }}"
             - name: PROMETHEUS_SERVER
               value: "{{ .Values.prometheus.prometheusServerAddress }}"
+            - name: price_uri
+              value: "http://{{ .Release.Name }}-price.{{ .Release.Namespace }}.svc.cluster.local"
           resources:
             limits:
               cpu: '1'
