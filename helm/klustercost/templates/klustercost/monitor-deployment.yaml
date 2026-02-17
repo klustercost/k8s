@@ -20,24 +20,22 @@ spec:
         - name: {{ .Release.Name }}-monitor
           image: {{ .Values.monitor.image }}
           env:
-            - name: RESINC_TIME
+            - name: RESYNC_TIME
               value: "{{ printf "%v" .Values.monitor.resyncTime }}"
             - name: CONTROLLER_WORKERS
               value: "{{ printf "%v" .Values.monitor.workers }}"
-            - name: user
+            - name: PG_DB_USER
               value: {{ .Values.postgresql.username }}
-            - name: password
+            - name: PG_DB_PASS
               value: {{ .Values.postgresql.password }}
-            - name: database
+            - name: PG_DB_NAME
               value: {{ .Values.postgresql.name }}
-            - name: host
+            - name: PG_DB_HOST
               value: {{ .Release.Name }}-postgres-service.{{ .Release.Namespace }}.svc.cluster.local
-            - name: port
+            - name: PG_DB_PORT
               value: "{{ printf "%v" .Values.postgresql.port }}"
             - name: PROMETHEUS_SERVER
               value: "{{ .Values.prometheus.prometheusServerAddress }}"
-            - name: price_uri
-              value: "http://{{ .Release.Name }}-price.{{ .Release.Namespace }}.svc.cluster.local"
           resources:
             limits:
               cpu: '1'

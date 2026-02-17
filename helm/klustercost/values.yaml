@@ -23,7 +23,7 @@ postgresql:
   serviceType: ClusterIP
 
 monitor:
-  image: klustercost/private:update-latest
+  image: klustercost/private:monitor-latest
   resyncTime: 300
   workers: 3
 
@@ -35,7 +35,7 @@ update:
   image: klustercost/private:update-latest
 
 prometheus:
-  prometheusServerAddress: "http://prometheus-server.prometheus.svc.cluster.local"
+  prometheusServerAddress: "http://prometheus-server.monitoring.svc.cluster.local"
 
 mcp:
   enabled: true
