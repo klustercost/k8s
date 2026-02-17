@@ -190,8 +190,8 @@ docker build -f Dockerfile.client -t klustercost/private:mcp-client-latest .
 ### Pushing to a registry
 
 ```bash
-docker push klustercost/private:mcp-server-latest .
-docker push klustercost/private:mcp-client-latest .
+docker push klustercost/private:mcp-server-latest
+docker push klustercost/private:mcp-client-latest
 ```
 
 ### Running with Docker locally
