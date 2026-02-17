@@ -23,16 +23,16 @@ postgresql:
   serviceType: ClusterIP
 
 monitor:
-  image: ghcr.io/klustercost/k8s/klustercost-monitor:latest
+  image: klustercost/private:update-latest
   resyncTime: 300
   workers: 3
 
 price:
-  image: ghcr.io/klustercost/k8s/klustercost-price:latest
+  image: klustercost/private:price-latest
   provider: "azure"
 
 update:
-  image: ghcr.io/klustercost/k8s/klustercost-update:latest
+  image: klustercost/private:update-latest
 
 prometheus:
   prometheusServerAddress: "http://prometheus-server.prometheus.svc.cluster.local"
