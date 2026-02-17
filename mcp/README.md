@@ -14,12 +14,17 @@ Built with [FastMCP](https://github.com/jlowin/fastmcp), a Python framework that
 
 ```
 mcp/
-├── .env                # Your credentials (never committed to git)
+├── .env                    # Your credentials (never committed to git)
 ├── .gitignore
-├── requirements.txt    # Python dependencies
-├── my_server.py        # The MCP server (runs the tools)
-├── my_client.py        # Interactive terminal client
-└── README.md           # You are here
+├── .dockerignore
+├── Dockerfile.server       # Docker image for the MCP server
+├── Dockerfile.client       # Docker image for the interactive client
+├── requirements.txt        # Server Python dependencies
+├── requirements-client.txt # Client Python dependencies
+├── system_prompt.txt       # OpenAI system prompt (editable)
+├── my_server.py            # The MCP server (runs the tools)
+├── my_client.py            # Interactive terminal client
+└── README.md               # You are here
 ```
 
 ## Setup
@@ -163,8 +168,155 @@ You do **not** need to know the exact table or column names. The server reads th
 | OpenAI `AuthenticationError` | Check that `OPENAI_API_KEY` in `.env` is valid |
 | Results are empty or wrong | Try rephrasing your question, or mention specific table/column names if you know them |
 
+## Docker Images
+
+Two separate images are provided -- one for the server and one for the client. Both use `python:3.14-slim-bookworm` as a base and run as a non-root user for security.
+
+### Building the images
+
+From the `mcp/` directory:
+
+```bash
+# Server image
+docker build -f Dockerfile.server -t your-registry/mcp-server:latest .
+
+# Client image
+docker build -f Dockerfile.client -t your-registry/mcp-client:latest .
+```
+
+### Pushing to a registry
+
+```bash
+docker push your-registry/mcp-server:latest
+docker push your-registry/mcp-client:latest
+```
+
+Replace `your-registry` with your actual container registry (e.g. `ghcr.io/yourorg`, `youracr.azurecr.io`, etc.).
+
+### Running with Docker locally
+
+```bash
+# Server
+docker run -d --name mcp-server \
+  -e OPENAI_API_KEY=sk-... \
+  -e PG_HOST=host.docker.internal \
+  -e PG_USER=klustercost \
+  -e PG_PASSWORD=klustercost \
+  -e PG_DATABASE=klustercost \
+  -e PG_SCHEMA=klustercost \
+  -p 8000:8000 \
+  your-registry/mcp-server:latest
+
+# Client (interactive)
+docker run -it --rm \
+  -e MCP_SERVER_URL=http://mcp-server:8000/mcp \
+  --link mcp-server \
+  your-registry/mcp-client:latest \
+  python my_client.py
+```
+
+## Kubernetes Deployment (Helm)
+
+The MCP server and client are packaged as part of the `klustercost` Helm chart. Helm templates live in `helm/klustercost/templates/mcp/`.
+
+### What gets deployed
+
+| Resource | Name | Purpose |
+| -------- | ---- | ------- |
+| Deployment | `<release>-mcp-server` | Runs the MCP server, connects to PostgreSQL and OpenAI |
+| Service | `<release>-mcp-server` | ClusterIP service on port 8000, used by the client |
+| Deployment | `<release>-mcp-client` | Idle pod you exec into for interactive CLI queries |
+| Secret | `<release>-mcp-secret` | Stores the OpenAI API key |
+
+### Configuring values.yaml
+
+Set your image registry and OpenAI key in the `mcp` section of `values.yaml`:
+
+```yaml
+mcp:
+  enabled: true
+  imagePullPolicy: Always
+
+  server:
+    image: your-registry/mcp-server:latest
+    replicas: 1
+    port: 8000
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  client:
+    image: your-registry/mcp-client:latest
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+  openai:
+    apiKey: "sk-proj-your-key-here"
+    model: "gpt-4o-mini"
+
+  postgresql:
+    schema: "klustercost"
+```
+
+PostgreSQL connection details (host, port, user, password, database) are automatically inherited from the existing `postgresql` section in values.yaml. The server connects to the in-cluster PostgreSQL service.
+
+### Deploying
+
+```bash
+helm upgrade --install klustercost helm/klustercost/ \
+  --set mcp.openai.apiKey="sk-proj-your-key-here" \
+  --set mcp.server.image="your-registry/mcp-server:latest" \
+  --set mcp.client.image="your-registry/mcp-client:latest"
+```
+
+### Querying the database via CLI
+
+The client pod is an idle container you exec into. This is the primary way to interact with the MCP server from within the cluster:
+
+```bash
+# Find the client pod
+kubectl get pods -l app=klustercost-mcp-client
+
+# Exec into it and start the interactive client
+kubectl exec -it deploy/klustercost-mcp-client -- python my_client.py
+```
+
+You'll see the interactive prompt:
+
+```
+Connected to MCP server at http://klustercost-mcp-server.<namespace>.svc.cluster.local:8000/mcp
+Type your question and press Enter. Type 'exit' to quit.
+
+Question: Which pod consumed the most CPU in the last 1 hour?
+[... JSON results ...]
+```
+
+### Accessing the server from outside the cluster
+
+If you want to connect to the MCP server from your local machine (e.g. with Cursor or Claude Desktop):
+
+```bash
+kubectl port-forward svc/klustercost-mcp-server 8000:8000
+```
+
+Then point your MCP client to `http://localhost:8000/mcp`.
+
+### Disabling MCP
+
+Set `mcp.enabled: false` in values.yaml (or `--set mcp.enabled=false`) to skip deploying the MCP components entirely.
+
 ## Notes
 
 - Only **read-only** (`SELECT`) queries are generated and executed. The system will not modify your data.
-- The OpenAI model used is `gpt-4o-mini`. You can change this in `my_server.py` in the `generate_sql()` function.
+- The OpenAI model is configurable via `mcp.openai.model` in values.yaml or `OPENAI_MODEL` env var (default: `gpt-4o-mini`).
+- The system prompt lives in `system_prompt.txt` and is baked into the server image. Edit it and rebuild to change the AI's behavior.
 - If the generated SQL fails, the error message will include the SQL that was attempted, so you can see what went wrong and rephrase your question.

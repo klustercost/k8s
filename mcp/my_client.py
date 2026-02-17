@@ -1,7 +1,9 @@
+import os
 import asyncio
 from fastmcp import Client
 
-client = Client("http://localhost:8000/mcp")
+MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8000/mcp")
+client = Client(MCP_SERVER_URL)
 
 
 async def ask(question: str):
@@ -13,7 +15,7 @@ async def ask(question: str):
             print(result.data)
 
 def main():
-    print("Connected to MCP server at http://localhost:8000/mcp")
+    print(f"Connected to MCP server at {MCP_SERVER_URL}")
     print("Type your question and press Enter. Type 'exit' to quit.\n")
     while True:
         try:

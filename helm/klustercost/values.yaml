@@ -29,3 +29,36 @@ update:
 
 prometheus:
   prometheusServerAddress: "http://prometheus-server.prometheus.svc.cluster.local"
+
+mcp:
+  enabled: true
+  imagePullPolicy: Always
+
+  server:
+    image: your-registry/mcp-server:latest
+    replicas: 1
+    port: 8000
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  client:
+    image: your-registry/mcp-client:latest
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+  openai:
+    apiKey: ""
+    model: "gpt-4o-mini"
+
+  postgresql:
+    schema: "klustercost"

@@ -1,0 +1,35 @@
+{{- if .Values.mcp.enabled }}
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: {{ .Release.Name }}-mcp-client
+  labels:
+    app: {{ .Release.Name }}-mcp-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-mcp-client
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-mcp-client
+    spec:
+      containers:
+        - name: mcp-client
+          image: {{ .Values.mcp.client.image }}
+          stdin: true
+          tty: true
+          env:
+            - name: MCP_SERVER_URL
+              value: http://{{ .Release.Name }}-mcp-server.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.mcp.server.port }}/mcp
+          resources:
+            requests:
+              cpu: {{ .Values.mcp.client.resources.requests.cpu }}
+              memory: {{ .Values.mcp.client.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.mcp.client.resources.limits.cpu }}
+              memory: {{ .Values.mcp.client.resources.limits.memory }}
+          imagePullPolicy: {{ .Values.mcp.imagePullPolicy }}
+      restartPolicy: Always
+{{- end }}

@@ -1,0 +1,17 @@
+{{- if .Values.mcp.enabled }}
+kind: Service
+apiVersion: v1
+metadata:
+  name: {{ .Release.Name }}-mcp-server
+  labels:
+    app: {{ .Release.Name }}-mcp-server
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: {{ .Values.mcp.server.port }}
+      targetPort: {{ .Values.mcp.server.port }}
+  selector:
+    app: {{ .Release.Name }}-mcp-server
+  type: ClusterIP
+{{- end }}

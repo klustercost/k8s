@@ -121,4 +121,9 @@ def ask_db(question: str) -> str:
 
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http", host="127.0.0.1", port=8000, path="/mcp")
+    mcp.run(
+        transport="streamable-http",
+        host=os.getenv("MCP_HOST", "0.0.0.0"),
+        port=int(os.getenv("MCP_PORT", "8000")),
+        path="/mcp",
+    )
