@@ -130,31 +130,34 @@ You do **not** need to know the exact table or column names. The server reads th
 
 ## How It Works
 
-1. **You** send a plain English question to the `ask_db` tool via any MCP-compatible client.
-2. **The server** connects to PostgreSQL and reads the schema -- all table names, column names, and data types for the configured schema.
-3. **The server** sends the schema and your question to OpenAI (`model-of-your-choice`), which generates a `SELECT` SQL query.
-4. **The server** executes the SQL against PostgreSQL.
-5. **You** receive the query results as JSON.
+The system has two parts: a **client** and a **server**.
+
+**The client** (`my_client.py`) is just a thin terminal wrapper. It reads your question from stdin, sends it over HTTP to the server, and prints the response. It has no knowledge of SQL, PostgreSQL, or OpenAI -- it's purely a pass-through.
+
+**The server** (`my_server.py`) does all the work in four stages:
+
+1. **Schema introspection** -- Queries `information_schema.columns` in PostgreSQL to get the current table names, column names, and data types. This happens on every request, so the server always reflects the latest database structure.
+2. **SQL generation** -- Sends the schema + your question to OpenAI via the Chat Completions API. A system prompt (loaded from `system_prompt.txt`) tells the model the domain context, the table relationships, and the PostgreSQL syntax rules. OpenAI returns a raw `SELECT` query. It never sees your actual data -- only the table/column metadata.
+3. **Query execution** -- Runs the generated SQL against PostgreSQL and packs the rows into dictionaries.
+4. **Response** -- Returns the results as JSON back to the client.
 
 ```
- You (question)
+ You type a question
   │
   ▼
- MCP Client (Cursor, Claude Desktop, etc.)
-  │
-  ──── HTTP ────►  MCP Server
-                       │
-             ┌─────────┼─────────┐
-             ▼                    ▼
-        PostgreSQL            OpenAI
-      (read schema)     (generate SQL)
-             │                    │
-             └────────┬───────────┘
-                      ▼
-              Execute SQL query
-                      │
-                      ▼
-             Return JSON results
+ my_client.py ──HTTP──► my_server.py
+                             │
+                    ┌────────┼────────┐
+                    ▼                  ▼
+               PostgreSQL          OpenAI
+             (read schema)    (generate SQL)
+                    │                  │
+                    └───────┬──────────┘
+                            ▼
+                  Execute generated SQL
+                            │
+                            ▼
+                  JSON results back to client
 ```
 
 ## Troubleshooting
