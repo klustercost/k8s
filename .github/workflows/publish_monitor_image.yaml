@@ -18,9 +18,6 @@ env:
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
-    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
-    permissions:
-      packages: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
