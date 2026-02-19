@@ -8,6 +8,9 @@ on:
         type: string
       image_name:
         required: true
+        type: string
+      base_folder:
+        required: true
         type: string        
     secrets:
       token:
@@ -33,6 +36,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
+          context: ${{ inputs.base_folder }}
           push: true
           tags: ${{ inputs.registry }}/${{ github.repository }}/${{ inputs.image_name }}:latest
           labels: ${{ steps.meta.outputs.labels }}        

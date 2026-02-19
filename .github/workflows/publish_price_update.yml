@@ -17,5 +17,6 @@ jobs:
     with:
       registry: ghcr.io
       image_name: klustercost-update
+      base_folder: update
     secrets: 
       token: ${{ secrets.GITHUB_TOKEN }}

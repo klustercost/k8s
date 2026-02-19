@@ -17,5 +17,6 @@ jobs:
     with:
       registry: ghcr.io
       image_name: klustercost-monitor
+      base_folder: monitor
     secrets: 
       token: ${{ secrets.GITHUB_TOKEN }}
