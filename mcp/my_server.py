@@ -1,11 +1,21 @@
 import os
 import json
+import logging
+import time
 import psycopg2
 from dotenv import load_dotenv
 from openai import OpenAI
 from fastmcp import FastMCP
 
 load_dotenv()
+
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+log = logging.getLogger("mcp-server")
 
 # System prompt file
 PROMPT_FILE = os.path.join(os.path.dirname(__file__), "system_prompt.txt")
@@ -38,6 +48,7 @@ def get_pg_connection():
 
 def get_schema_info() -> str:
     """Fetch table and column metadata from information_schema."""
+    log.debug("Fetching schema metadata for schema=%s", PG_SCHEMA)
     conn = None
     try:
         conn = get_pg_connection()
@@ -60,7 +71,9 @@ def get_schema_info() -> str:
         lines = []
         for table, cols in tables.items():
             lines.append(f"{PG_SCHEMA}.{table}: {', '.join(cols)}")
-        return "\n".join(lines)
+        schema_text = "\n".join(lines)
+        log.debug("Schema info (%d tables): %s", len(tables), schema_text)
+        return schema_text
     finally:
         if conn is not None:
             conn.close()
@@ -68,6 +81,8 @@ def get_schema_info() -> str:
 
 def generate_sql(question: str, schema: str) -> str:
     """Ask OpenAI to produce a read-only SQL query for the given question."""
+    log.info("Generating SQL via OpenAI (model=%s) …", OPENAI_MODEL)
+    t0 = time.perf_counter()
     response = openai_client.chat.completions.create(
         model=OPENAI_MODEL,
         messages=[
@@ -76,23 +91,34 @@ def generate_sql(question: str, schema: str) -> str:
         ],
         temperature=0,
     )
+    elapsed = time.perf_counter() - t0
     content = response.choices[0].message.content
     if content is None:
         raise ValueError("OpenAI returned an empty response — no SQL was generated")
-    return content.strip()
+    sql = content.strip()
+    log.info("SQL generated in %.2fs:\n%s", elapsed, sql)
+    return sql
 
 
 def run_query(sql: str) -> list[dict]:
     """Execute a SELECT query and return rows as list of dicts."""
+    log.info("Sending query to PostgreSQL (%s:%s/%s) …", PG_HOST, PG_PORT, PG_DATABASE)
     conn = None
     try:
+        t0 = time.perf_counter()
         conn = get_pg_connection()
         with conn.cursor() as cur:
             cur.execute(sql)
             if cur.description is None:
                 raise ValueError("Query returned no result set — only SELECT statements are supported")
             columns = [desc[0] for desc in cur.description]
-            return [dict(zip(columns, row)) for row in cur.fetchall()]
+            rows = [dict(zip(columns, row)) for row in cur.fetchall()]
+        elapsed = time.perf_counter() - t0
+        log.info("PostgreSQL responded in %.2fs — %d row(s) returned", elapsed, len(rows))
+        log.debug("Result columns: %s", columns)
+        if rows:
+            log.debug("First row: %s", rows[0])
+        return rows
     finally:
         if conn is not None:
             conn.close()
@@ -107,17 +133,25 @@ def ask_db(question: str) -> str:
     The question is converted to SQL via OpenAI, executed, and the
     results are returned as JSON.
     """
+    log.info("──── New question received ────")
+    log.info("User question: %s", question)
     sql = None
     try:
         schema = get_schema_info()
         sql = generate_sql(question, schema)
         if sql.strip() == "REFUSE":
+            log.warning("Question refused by LLM (off-topic)")
             return "Sorry, I can only answer questions about the Kubernetes cluster database."
         rows = run_query(sql)
     except Exception as e:
         sql_info = f"\nGenerated SQL was:\n{sql}" if sql else ""
+        log.error("ask_db failed: %s%s", e, sql_info)
         return f"Error: {e}{sql_info}"
-    return json.dumps(rows, indent=2, default=str)
+    result = json.dumps(rows, indent=2, default=str)
+    log.info("Returning %d row(s) to client", len(rows))
+    log.debug("Full result payload:\n%s", result)
+    log.info("──── Question complete ────")
+    return result
 
 
 if __name__ == "__main__":
