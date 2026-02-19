@@ -28,10 +28,12 @@ class operate_db:
         logging.debug(f'Checking for nodes with no price')
         try:
             with self.connection.cursor() as cursor:
-                cursor.execute("SELECT idx, labels FROM klustercost.tbl_nodes where price_per_hour is null")                
+                cursor.execute("SELECT idx, labels FROM klustercost.tbl_nodes WHERE price_per_hour IS NULL AND labels IS NOT NULL")
                 row = cursor.fetchone()
                 while row is not None:
-                    self.set_work_item(row[0],self.price_from_labels(row[1]))
+                    price = self.price_from_labels(row[1])
+                    if price is not None:
+                        self.set_work_item(row[0], price)
                     row = cursor.fetchone()
             self.connection.commit()
         except psycopg2.DatabaseError as error:
@@ -59,12 +61,20 @@ class operate_db:
             var = json.loads(urllib.request.urlopen(request).read().decode("utf-8"))
             return var[0][1]
         except (KeyError, IndexError) as Ex:
-            logging.error(f"Error: no data for: region={node_data['topology.kubernetes.io/region']}&sku={node_data['node.kubernetes.io/instance-type']}&os={node_data['kubernetes.io/os']}") 
-
+            logging.error(
+                "Error: no data for: region=%s&sku=%s&os=%s (%s)",
+                node_data.get('topology.kubernetes.io/region', 'MISSING'),
+                node_data.get('node.kubernetes.io/instance-type', 'MISSING'),
+                node_data.get('kubernetes.io/os', 'MISSING'),
+                Ex,
+            )
     def set_work_item(self, idx, price) -> None:
         logging.debug(f'Setting at {idx} cost of {price}')        
         try:
-            self.connection.cursor().execute(f"UPDATE klustercost.tbl_nodes set price_per_hour = {price} where idx = {idx}")
+            self.connection.cursor().execute(
+                "UPDATE klustercost.tbl_nodes SET price_per_hour = %s WHERE idx = %s",
+                (price, idx),
+            )
         except psycopg2.DatabaseError as error:
             logging.error(error)        
 
