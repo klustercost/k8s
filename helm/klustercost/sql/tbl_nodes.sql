@@ -4,6 +4,7 @@ CREATE TABLE klustercost.tbl_nodes (
     node character varying (100),
     mem double precision,
     cpu double precision,
+    labels character varying(500),
     "node.kubernetes.io/instance-type" character varying (100),
     "topology.kubernetes.io/region" character varying (100),
     "topology.kubernetes.io/zone" character varying (100),

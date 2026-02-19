@@ -2,9 +2,16 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# --- Private container registry ---
+imageRegistry:
+  enabled: false
+  server: ""
+  username: ""
+  password: ""
+
 postgresql:
   enabled: true
-  image: postgres:latest
+  image: postgres:17
   name: klustercost
   username: klustercost
   password: klustercost
@@ -28,4 +35,37 @@ update:
   image: ghcr.io/klustercost/k8s/klustercost-update:latest
 
 prometheus:
-  prometheusServerAddress: "http://prometheus-server.prometheus.svc.cluster.local"
+  prometheusServerAddress: "http://prometheus-server.monitoring.svc.cluster.local"
+
+mcp:
+  enabled: true
+  imagePullPolicy: Always
+
+  server:
+    image: ghcr.io/klustercost/k8s/klustercost-mcp-server:latest
+    replicas: 1
+    port: 8000
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  client:
+    image: ghcr.io/klustercost/k8s/klustercost-mcp-client:latest
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+  openai:
+    apiKey: ""
+    model: "gpt-4o-mini"
+
+  postgresql:
+    schema: "klustercost"

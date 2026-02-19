@@ -13,6 +13,10 @@ spec:
       labels:
         app: postgres
     spec:
+      {{- if .Values.imageRegistry.enabled }}
+      imagePullSecrets:
+        - name: {{ .Release.Name }}-registry-secret
+      {{- end }}
       containers:
       - name: postgres
         image: {{ .Values.postgresql.image }}

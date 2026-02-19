@@ -1,0 +1,71 @@
+{{- if .Values.mcp.enabled }}
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: {{ .Release.Name }}-mcp-server
+  labels:
+    app: {{ .Release.Name }}-mcp-server
+spec:
+  replicas: {{ .Values.mcp.server.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-mcp-server
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-mcp-server
+    spec:
+      {{- if .Values.imageRegistry.enabled }}
+      imagePullSecrets:
+        - name: {{ .Release.Name }}-registry-secret
+      {{- end }}
+      containers:
+        - name: mcp-server
+          image: {{ .Values.mcp.server.image }}
+          ports:
+            - containerPort: {{ .Values.mcp.server.port }}
+              protocol: TCP
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-mcp-secret
+                  key: OPENAI_API_KEY
+            - name: OPENAI_MODEL
+              value: {{ .Values.mcp.openai.model | quote }}
+            - name: PG_HOST
+              value: {{ .Release.Name }}-postgres-service.{{ .Release.Namespace }}.svc.cluster.local
+            - name: PG_PORT
+              value: {{ .Values.postgresql.port | quote }}
+            - name: PG_USER
+              value: {{ .Values.postgresql.username | quote }}
+            - name: PG_PASSWORD
+              value: {{ .Values.postgresql.password | quote }}
+            - name: PG_DATABASE
+              value: {{ .Values.postgresql.name | quote }}
+            - name: PG_SCHEMA
+              value: {{ .Values.mcp.postgresql.schema | quote }}
+            - name: MCP_HOST
+              value: "0.0.0.0"
+            - name: MCP_PORT
+              value: {{ .Values.mcp.server.port | quote }}
+          resources:
+            requests:
+              cpu: {{ .Values.mcp.server.resources.requests.cpu }}
+              memory: {{ .Values.mcp.server.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.mcp.server.resources.limits.cpu }}
+              memory: {{ .Values.mcp.server.resources.limits.memory }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.mcp.server.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.mcp.server.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          imagePullPolicy: {{ .Values.mcp.imagePullPolicy }}
+      restartPolicy: Always
+{{- end }}

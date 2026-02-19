@@ -1,5 +1,8 @@
 CREATE SCHEMA IF NOT EXISTS klustercost;
 
+CREATE SEQUENCE IF NOT EXISTS klustercost.tbl_pods_idx_seq;
+CREATE SEQUENCE IF NOT EXISTS klustercost.tbl_pod_data_idx_seq;
+
 CREATE TABLE IF NOT EXISTS klustercost.tbl_pods
 (
     idx integer NOT NULL DEFAULT nextval('klustercost.tbl_pods_idx_seq'::regclass),
