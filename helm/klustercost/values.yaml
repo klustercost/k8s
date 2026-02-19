@@ -5,8 +5,8 @@
 # --- Private container registry ---
 imageRegistry:
   enabled: false
-  server: "https://index.docker.io/v1/"
-  username: "klustercost"
+  server: ""
+  username: ""
   password: ""
 
 postgresql:
@@ -23,16 +23,16 @@ postgresql:
   serviceType: ClusterIP
 
 monitor:
-  image: klustercost/private:monitor-latest
+  image: ghcr.io/klustercost/k8s/klustercost-monitor:latest
   resyncTime: 300
   workers: 3
 
 price:
-  image: klustercost/private:price-latest
+  image: ghcr.io/klustercost/k8s/klustercost-price:latest
   provider: "azure"
 
 update:
-  image: klustercost/private:update-latest
+  image: ghcr.io/klustercost/k8s/klustercost-update:latest
 
 prometheus:
   prometheusServerAddress: "http://prometheus-server.monitoring.svc.cluster.local"
@@ -42,7 +42,7 @@ mcp:
   imagePullPolicy: Always
 
   server:
-    image: klustercost/private:mcp-server-latest
+    image: ghcr.io/klustercost/k8s/klustercost-mcp-server:latest
     replicas: 1
     port: 8000
     resources:
@@ -54,7 +54,7 @@ mcp:
         memory: 512Mi
 
   client:
-    image: klustercost/private:mcp-client-latest
+    image: ghcr.io/klustercost/k8s/klustercost-mcp-client:latest
     resources:
       requests:
         cpu: 50m

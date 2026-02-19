@@ -181,17 +181,17 @@ From the `mcp/` directory:
 
 ```bash
 # Server image
-docker build -f Dockerfile.server -t klustercost/private:mcp-server-latest .
+docker build -f Dockerfile.server -t ghcr.io/klustercost/k8s/klustercost-mcp-server:latest .
 
 # Client image
-docker build -f Dockerfile.client -t klustercost/private:mcp-client-latest .
+docker build -f Dockerfile.client -t ghcr.io/klustercost/k8s/klustercost-mcp-client:latest .
 ```
 
 ### Pushing to a registry
 
 ```bash
-docker push klustercost/private:mcp-server-latest
-docker push klustercost/private:mcp-client-latest
+docker push ghcr.io/klustercost/k8s/klustercost-mcp-server:latest
+docker push ghcr.io/klustercost/k8s/klustercost-mcp-client:latest
 ```
 
 ### Running with Docker locally
@@ -206,13 +206,13 @@ docker run -d --name mcp-server \
   -e PG_DATABASE=klustercost \
   -e PG_SCHEMA=klustercost \
   -p 8000:8000 \
-  klustercost/private:mcp-server-latest
+  ghcr.io/klustercost/k8s/klustercost-mcp-server:latest
 
 # Client (interactive)
 docker run -it --rm \
   -e MCP_SERVER_URL=http://mcp-server:8000/mcp \
   --link mcp-server \
-  klustercost/private:mcp-client-latest \
+  ghcr.io/klustercost/k8s/klustercost-mcp-client:latest \
   python my_client.py
 ```
 
@@ -239,7 +239,7 @@ mcp:
   imagePullPolicy: Always
 
   server:
-    image: klustercost/private:mcp-server-latest
+    image: ghcr.io/klustercost/k8s/klustercost-mcp-server:latest
     replicas: 1
     port: 8000
     resources:
@@ -251,7 +251,7 @@ mcp:
         memory: 512Mi
 
   client:
-    image: klustercost/private:mcp-client-latest
+    image: ghcr.io/klustercost/k8s/klustercost-mcp-client:latest
     resources:
       requests:
         cpu: 50m
@@ -275,8 +275,8 @@ PostgreSQL connection details (host, port, user, password, database) are automat
 ```bash
 helm upgrade --install klustercost helm/klustercost/ \
   --set mcp.openai.apiKey="sk-proj-your-key-here" \
-  --set mcp.server.image="klustercost/private:mcp-server-latest" \
-  --set mcp.client.image="klustercost/private:mcp-client-latest"
+  --set mcp.server.image="ghcr.io/klustercost/k8s/klustercost-mcp-server:latest" \
+  --set mcp.client.image="ghcr.io/klustercost/k8s/klustercost-mcp-client:latest"
 ```
 
 ### Querying the database via CLI
