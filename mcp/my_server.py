@@ -2,6 +2,8 @@ import os
 import json
 import logging
 import time
+from functools import lru_cache
+
 import psycopg2
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -45,7 +47,11 @@ def get_pg_connection():
         dbname=PG_DATABASE,
     )
 
-
+# cache schema info
+# lru_cache stands for Least Recently Used Cache. 
+# It's a decorator from functools that remembers the result of a function call so it doesn't have to run again.
+# maxsize=1 means it only remembers the last result.
+@lru_cache(maxsize=1)
 def get_schema_info() -> str:
     """Fetch table and column metadata from information_schema."""
     log.debug("Fetching schema metadata for schema=%s", PG_SCHEMA)
