@@ -26,6 +26,8 @@ spec:
             - containerPort: {{ .Values.mcp.server.port }}
               protocol: TCP
           env:
+            - name: LOG_LEVEL
+              value: {{ .Values.mcp.logLevel | quote }}
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
