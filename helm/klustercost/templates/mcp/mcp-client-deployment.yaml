@@ -25,9 +25,8 @@ spec:
           stdin: true
           tty: true
           env:
-            # LOG_LEVEL: DEBUG | INFO
             - name: LOG_LEVEL
-              value: "INFO"
+              value: {{ .Values.mcp.logLevel | quote }}
             - name: MCP_SERVER_URL
               value: http://{{ .Release.Name }}-mcp-server.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.mcp.server.port }}/mcp
           resources:
