@@ -40,6 +40,8 @@ prometheus:
 mcp:
   enabled: true
   imagePullPolicy: Always
+  # Log level for MCP components. Valid values: DEBUG | INFO
+  logLevel: "INFO"
 
   server:
     image: ghcr.io/klustercost/k8s/klustercost-mcp-server:latest
