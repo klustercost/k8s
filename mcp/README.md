@@ -23,7 +23,7 @@ mcp/
 ├── requirements-client.txt # Client Python dependencies
 ├── system_prompt.txt       # OpenAI system prompt (editable)
 ├── my_server.py            # The MCP server (runs the tools)
-├── my_client.py            # Interactive terminal client
+├── my_client.py            # HTTP server that exposes the /ask endpoint
 └── README.md               # You are here
 ```
 
@@ -91,24 +91,21 @@ The server starts on `http://127.0.0.1:8000/mcp` and waits for connections.
 
 You have two options:
 
-**Option A: Interactive terminal client**
+**Option A: HTTP client endpoint**
 
 ```bash
 python my_client.py
 ```
 
-This opens an interactive prompt where you type questions in plain English and get results back immediately:
+This starts an HTTP server on `http://0.0.0.0:8080` that accepts questions via a REST endpoint:
 
+```bash
+curl -X POST http://localhost:8080/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Which pod consumed the most CPU in the last 1 hour?"}'
 ```
-Connected to MCP server at http://localhost:8000/mcp
-Type your question and press Enter. Type 'exit' to quit.
 
-Question: Which pod consumed the most CPU in the last 1 hour?
-[... JSON results ...]
-
-Question: exit
-Bye!
-```
+See the [HTTP Endpoint](#http-endpoint) section below for full details.
 
 **Option B: MCP-compatible client**
 
@@ -132,7 +129,7 @@ You do **not** need to know the exact table or column names. The server reads th
 
 The system has two parts: a **client** and a **server**.
 
-**The client** (`my_client.py`) is just a thin terminal wrapper. It reads your question from stdin, sends it over HTTP to the server, and prints the response. It has no knowledge of SQL, PostgreSQL, or OpenAI -- it's purely a pass-through.
+**The client** (`my_client.py`) is a lightweight HTTP server built with Python's `http.server`. It exposes a `POST /ask` endpoint that accepts a JSON body, forwards the question to the MCP server over the MCP protocol, and returns the result as JSON. It has no knowledge of SQL, PostgreSQL, or OpenAI -- it's purely a pass-through.
 
 **The server** (`my_server.py`) does all the work in four stages:
 
@@ -142,23 +139,68 @@ The system has two parts: a **client** and a **server**.
 4. **Response** -- Returns the results as JSON back to the client.
 
 ```
- You type a question
+ curl POST /ask
   │
   ▼
- my_client.py ──HTTP──► my_server.py
-                             │
-                    ┌────────┼────────┐
-                    ▼                  ▼
-               PostgreSQL          OpenAI
-             (read schema)    (generate SQL)
-                    │                  │
-                    └───────┬──────────┘
-                            ▼
-                  Execute generated SQL
-                            │
-                            ▼
-                  JSON results back to client
+ my_client.py ──MCP protocol──► my_server.py
+  (HTTP :8080)                    (HTTP :8000/mcp)
+                                       │
+                              ┌────────┼────────┐
+                              ▼                  ▼
+                         PostgreSQL          OpenAI
+                       (read schema)    (generate SQL)
+                              │                  │
+                              └───────┬──────────┘
+                                      ▼
+                            Execute generated SQL
+                                      │
+                                      ▼
+                            JSON results back to client
 ```
+
+## HTTP Endpoint
+
+The MCP client (`my_client.py`) runs an HTTP server that acts as a bridge between plain HTTP requests and the MCP server. It accepts a natural-language question, forwards it to the MCP server via the MCP protocol, and returns the AI-generated result as JSON.
+
+### Available Endpoints
+
+| Method | Path       | Description                              |
+|--------|------------|------------------------------------------|
+| POST   | `/ask`     | Send a natural-language question to the AI |
+| GET    | `/healthz` | Health check (returns `{"status": "ok"}`) |
+
+### Sending a Question
+
+```bash
+curl -X POST http://localhost:8080/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What are the top 5 pods by CPU usage?"}'
+```
+
+Successful response (HTTP 200):
+
+```json
+{
+  "answer": "[{\"name\": \"pod-abc\", \"cpu\": 0.85}, ...]"
+}
+```
+
+### Error Responses
+
+| Status | Meaning                                    | Example Body                                        |
+|--------|--------------------------------------------|-----------------------------------------------------|
+| 400    | Bad request (missing or invalid JSON body) | `{"error": "Missing or empty 'question' field"}`    |
+| 404    | Unknown endpoint                           | `{"error": "Not found"}`                            |
+| 500    | Server-side error                          | `{"error": "Internal server error"}`                |
+
+### Configuration
+
+| Variable          | Default                      | Description                       |
+|-------------------|------------------------------|-----------------------------------|
+| `MCP_SERVER_URL`  | `http://localhost:8000/mcp`  | URL of the MCP server             |
+| `MCP_CLIENT_HOST` | `0.0.0.0`                   | Address the HTTP server binds to  |
+| `MCP_CLIENT_PORT` | `8080`                       | Port the HTTP server listens on   |
+| `LOG_LEVEL`       | `INFO`                       | Log level (DEBUG or INFO)         |
 
 ## Troubleshooting
 
@@ -208,12 +250,12 @@ docker run -d --name mcp-server \
   -p 8000:8000 \
   ghcr.io/klustercost/k8s/klustercost-mcp-server:latest
 
-# Client (interactive)
-docker run -it --rm \
+# Client (HTTP server on port 8080)
+docker run -d --name mcp-client \
   -e MCP_SERVER_URL=http://mcp-server:8000/mcp \
   --link mcp-server \
-  ghcr.io/klustercost/k8s/klustercost-mcp-client:latest \
-  python my_client.py
+  -p 8080:8080 \
+  ghcr.io/klustercost/k8s/klustercost-mcp-client:latest
 ```
 
 ## Kubernetes Deployment (Helm)
@@ -226,7 +268,8 @@ The MCP server and client are packaged as part of the `klustercost` Helm chart. 
 | -------- | ---- | ------- |
 | Deployment | `<release>-mcp-server` | Runs the MCP server, connects to PostgreSQL and OpenAI |
 | Service | `<release>-mcp-server` | ClusterIP service on port 8000, used by the client |
-| Deployment | `<release>-mcp-client` | Idle pod you exec into for interactive CLI queries |
+| Deployment | `<release>-mcp-client` | Runs the HTTP server that exposes the /ask endpoint |
+| Service | `<release>-mcp-client` | LoadBalancer service on port 8080, exposed externally |
 | Secret | `<release>-mcp-secret` | Stores the OpenAI API key |
 
 ### Configuring values.yaml
@@ -252,6 +295,8 @@ mcp:
 
   client:
     image: ghcr.io/klustercost/k8s/klustercost-mcp-client:latest
+    port: 8080
+    serviceType: LoadBalancer
     resources:
       requests:
         cpu: 50m
@@ -279,29 +324,23 @@ helm upgrade --install klustercost helm/klustercost/ \
   --set mcp.client.image="ghcr.io/klustercost/k8s/klustercost-mcp-client:latest"
 ```
 
-### Querying the database via CLI
+### Querying the database via the HTTP endpoint
 
-The client pod is an idle container you exec into. This is the primary way to interact with the MCP server from within the cluster:
+The client pod exposes a `POST /ask` endpoint via a LoadBalancer service. Get the external IP and send requests:
 
 ```bash
-# Find the client pod
-kubectl get pods -l app=klustercost-mcp-client
+# Get the external IP of the client service
+kubectl get svc -l app=klustercost-mcp-client
 
-# Exec into it and start the interactive client
-kubectl exec -it deploy/klustercost-mcp-client -- python my_client.py
+# Send a question
+curl -X POST http://<EXTERNAL-IP>:8080/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Which pod consumed the most CPU in the last 1 hour?"}'
 ```
 
-You'll see the interactive prompt:
+See the [HTTP Endpoint](#http-endpoint) section for full endpoint documentation.
 
-```
-Connected to MCP server at http://klustercost-mcp-server.<namespace>.svc.cluster.local:8000/mcp
-Type your question and press Enter. Type 'exit' to quit.
-
-Question: Which pod consumed the most CPU in the last 1 hour?
-[... JSON results ...]
-```
-
-### Accessing the server from outside the cluster
+### Accessing the MCP server directly from outside the cluster
 
 If you want to connect to the MCP server from your local machine (e.g. with Cursor or Claude Desktop):
 
