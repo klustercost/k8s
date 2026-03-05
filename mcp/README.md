@@ -18,7 +18,7 @@ mcp/
 ├── .gitignore
 ├── .dockerignore
 ├── Dockerfile.server       # Docker image for the MCP server
-├── Dockerfile.client       # Docker image for the interactive client
+├── Dockerfile.client       # Docker image for the HTTP client
 ├── requirements.txt        # Server Python dependencies
 ├── requirements-client.txt # Client Python dependencies
 ├── system_prompt.txt       # OpenAI system prompt (editable)
