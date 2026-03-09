@@ -1,7 +1,7 @@
 FROM python:3.11-slim-bookworm
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc libpq-dev && \
+    apt-get install -y --no-install-recommends gcc libc6-dev libpq-dev && \
     rm -rf /var/lib/apt/lists/*
 
 RUN groupadd --gid 1000 appuser && \
