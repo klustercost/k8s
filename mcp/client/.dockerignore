@@ -6,5 +6,5 @@ __pycache__/
 .git/
 .gitignore
 README.md
-Dockerfile.*
+Dockerfile
 .dockerignore

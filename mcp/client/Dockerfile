@@ -5,7 +5,7 @@ RUN groupadd --gid 1000 appuser && \
 
 WORKDIR /app
 
-COPY requirements-client.txt ./requirements.txt
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY my_client.py ./

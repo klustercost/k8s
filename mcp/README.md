@@ -16,15 +16,16 @@ Built with [FastMCP](https://github.com/jlowin/fastmcp), a Python framework that
 mcp/
 ├── .env                    # Your credentials (never committed to git)
 ├── .gitignore
-├── .dockerignore
-├── Dockerfile.server       # Docker image for the MCP server
-├── Dockerfile.client       # Docker image for the HTTP client
-├── requirements.txt        # Server Python dependencies
-├── requirements-client.txt # Client Python dependencies
-├── system_prompt.txt       # OpenAI system prompt (editable)
-├── my_server.py            # The MCP server (runs the tools)
-├── my_client.py            # HTTP server that exposes the /ask endpoint
-└── README.md               # You are here
+├── README.md               # You are here
+├── server/
+│   ├── Dockerfile          # Docker image for the MCP server
+│   ├── requirements.txt    # Server Python dependencies
+│   ├── my_server.py        # The MCP server (runs the tools)
+│   └── system_prompt.txt   # OpenAI system prompt (editable)
+└── client/
+    ├── Dockerfile          # Docker image for the HTTP client
+    ├── requirements.txt    # Client Python dependencies
+    └── my_client.py        # HTTP server that exposes the /ask endpoint
 ```
 
 ## Setup
@@ -219,14 +220,14 @@ Two separate images are provided -- one for the server and one for the client. B
 
 ### Building the images
 
-From the `mcp/` directory:
+From the repository root:
 
 ```bash
 # Server image
-docker build -f Dockerfile.server -t ghcr.io/klustercost/k8s/klustercost-mcp-server:latest .
+docker build -t ghcr.io/klustercost/k8s/klustercost-mcp-server:latest mcp/server/
 
 # Client image
-docker build -f Dockerfile.client -t ghcr.io/klustercost/k8s/klustercost-mcp-client:latest .
+docker build -t ghcr.io/klustercost/k8s/klustercost-mcp-client:latest mcp/client/
 ```
 
 ### Pushing to a registry
