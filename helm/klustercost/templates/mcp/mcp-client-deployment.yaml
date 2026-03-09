@@ -22,13 +22,18 @@ spec:
       containers:
         - name: mcp-client
           image: {{ .Values.mcp.client.image }}
-          stdin: true
-          tty: true
+          ports:
+            - containerPort: {{ .Values.mcp.client.port }}
+              protocol: TCP
           env:
             - name: LOG_LEVEL
               value: {{ .Values.mcp.logLevel | quote }}
             - name: MCP_SERVER_URL
               value: http://{{ .Release.Name }}-mcp-server.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.mcp.server.port }}/mcp
+            - name: MCP_CLIENT_HOST
+              value: "0.0.0.0"
+            - name: MCP_CLIENT_PORT
+              value: {{ .Values.mcp.client.port | quote }}
           resources:
             requests:
               cpu: {{ .Values.mcp.client.resources.requests.cpu }}
@@ -36,6 +41,18 @@ spec:
             limits:
               cpu: {{ .Values.mcp.client.resources.limits.cpu }}
               memory: {{ .Values.mcp.client.resources.limits.memory }}
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.mcp.client.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.mcp.client.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 30
           imagePullPolicy: {{ .Values.mcp.imagePullPolicy }}
       restartPolicy: Always
 {{- end }}

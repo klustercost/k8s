@@ -12,4 +12,6 @@ COPY my_client.py ./
 
 USER appuser
 
-CMD ["sleep", "infinity"]
+EXPOSE 8080
+
+CMD ["python", "my_client.py"]
