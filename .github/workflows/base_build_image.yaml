@@ -15,7 +15,6 @@ on:
     secrets:
       token:
         required: true
-  workflow_dispatch:
 
 jobs:
   build-and-push-image:
