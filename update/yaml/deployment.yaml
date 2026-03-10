@@ -16,7 +16,7 @@ spec:
         - name: klustercost-update
           image: ghcr.io/klustercost/k8s/klustercost-update:latest
           env:
-            - name: price-server
+            - name: price_uri
               value: "klustercost-price"
             #db from here
             - name: host
@@ -27,6 +27,8 @@ spec:
               value: "postgres"
             - name: password
               value: "postgres"
+            - name: port
+              value: "5432"
           resources:
             limits:
               cpu: "1"
