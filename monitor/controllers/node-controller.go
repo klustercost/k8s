@@ -161,6 +161,10 @@ func (nc *NodeController) getNodeMiscellaneous(name string) *model.NodeMisc {
 	nodeMisc.CPU = float64(node.Status.Capacity.Cpu().Value())
 	nodeMisc.UID = string(node.ObjectMeta.UID)
 	nodeMisc.Labels = NodeLabelSelector(node.Labels)
+	nodeMisc.InstanceType = node.Labels["node.kubernetes.io/instance-type"]
+	nodeMisc.Region = node.Labels["topology.kubernetes.io/region"]
+	nodeMisc.Zone = node.Labels["topology.kubernetes.io/zone"]
+	nodeMisc.OS = node.Labels["kubernetes.io/os"]
 
 	return nodeMisc
 }

@@ -62,14 +62,15 @@ func (pg *persistence_pg) InsertPod(pod_name, namespace, node string, podUsage *
 // This function inserts the details of a node into the database
 // price_per_hour to be added to the function argument and to the query once it is actually defined
 func (pg *persistence_pg) InsertNode(node_name string, nodeMisc *model.NodeMisc) error {
-	_, err := pg.db_connection.Exec("CALL add_node($1, $2, $3)",
-		node_name, nodeMisc.Memory, nodeMisc.CPU)
+	_, err := pg.db_connection.Exec("CALL add_node($1, $2, $3, NULLIF($4,''), NULLIF($5,''), NULLIF($6,''), NULLIF($7,''), NULLIF($8,''))",
+		node_name, nodeMisc.Memory, nodeMisc.CPU,
+		nodeMisc.Labels, nodeMisc.InstanceType, nodeMisc.Region, nodeMisc.Zone, nodeMisc.OS)
 	if err != nil {
 		fmt.Println("Error inserting node details into the database:", err)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		return err
 	}
-	fmt.Println("INSERTED Node:", node_name, "memory", nodeMisc.Memory, "CPU", nodeMisc.CPU, "UID", nodeMisc.UID)
+	fmt.Println("INSERTED Node:", node_name, "memory", nodeMisc.Memory, "CPU", nodeMisc.CPU, "labels", nodeMisc.Labels)
 	return nil
 }
 

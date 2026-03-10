@@ -10,10 +10,14 @@ import (
 // It is used to insert data into the database
 // Used by node-controller.go
 type NodeMisc struct {
-	Memory float64
-	CPU    float64
-	UID    string
-	Labels string
+	Memory       float64
+	CPU          float64
+	UID          string
+	Labels       string
+	InstanceType string
+	Region       string
+	Zone         string
+	OS           string
 }
 
 // This struct is used to store the memory and CPU usage of a pod
