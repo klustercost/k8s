@@ -1,0 +1,44 @@
+{{- if .Values.wafrontend.enabled }}
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: {{ .Release.Name }}-wa-frontend
+spec:
+  replicas: {{ .Values.wafrontend.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-wa-frontend
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-wa-frontend
+    spec:
+      containers:
+        - name: kc-wab
+          image: ghcr.io/klustercost/k8s/klustercost-wab:latest
+          env:
+            - name: VERIFY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-wa-frontend
+                  key: VERIFY_TOKEN
+            - name: ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-wa-frontend
+                  key: ACCESS_TOKEN
+            - name: HOST_PORT
+              value: "{{ .Values.wafrontend.port }}"
+            - name: MCP_CLIENT_ADDRESS
+              value: http://{{ .Release.Name }}-mcp-client.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.mcp.client.port }}
+          resources:
+            requests:
+              cpu: {{ .Values.wafrontend.resources.requests.cpu }}
+              memory: {{ .Values.wafrontend.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.wafrontend.resources.limits.cpu }}
+              memory: {{ .Values.wafrontend.resources.limits.memory }}
+          ports:
+            - containerPort: {{ .Values.wafrontend.port }}
+              protocol: TCP          
+{{- end }}          

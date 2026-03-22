@@ -1,0 +1,17 @@
+{{- if .Values.wafrontend.enabled }}
+kind: Service
+apiVersion: v1
+metadata:
+  name: {{ .Release.Name }}-wa-frontend
+  labels:
+    app: {{ .Release.Name }}-wa-frontend
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: {{ .Values.wafrontend.port }}
+      targetPort: {{ .Values.wafrontend.port }}
+  selector:
+    app: {{ .Release.Name }}-wa-frontend
+  type: {{ .Values.wafrontend.serviceType }}
+{{- end }}
