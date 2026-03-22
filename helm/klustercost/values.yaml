@@ -35,7 +35,7 @@ update:
   image: ghcr.io/klustercost/k8s/klustercost-update:latest
 
 prometheus:
-  prometheusServerAddress: "http://prometheus-server.monitoring.svc.cluster.local"
+  prometheusServerAddress: "http://prometheus-server.prometheus.svc.cluster.local"
 
 mcp:
   enabled: true
@@ -73,3 +73,17 @@ mcp:
 
   postgresql:
     schema: "klustercost"
+
+wafrontend:
+  enabled: true
+  port: 5000
+  serviceType: LoadBalancer
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  
