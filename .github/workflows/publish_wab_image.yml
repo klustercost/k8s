@@ -16,7 +16,7 @@ jobs:
     uses: ./.github/workflows/base_build_image.yaml
     with:
       registry: ghcr.io
-      image_name: klustercost-wab
+      image_name: klustercost-wab-test
       base_folder: wab
     secrets: 
       token: ${{ secrets.GITHUB_TOKEN }}
