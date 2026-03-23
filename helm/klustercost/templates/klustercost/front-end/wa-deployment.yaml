@@ -40,5 +40,17 @@ spec:
               memory: {{ .Values.wafrontend.resources.limits.memory }}
           ports:
             - containerPort: {{ .Values.wafrontend.port }}
-              protocol: TCP          
+              protocol: TCP   
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.wafrontend.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.wafrontend.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 30                     
 {{- end }}          
