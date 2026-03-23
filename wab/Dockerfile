@@ -1,16 +1,24 @@
-FROM python:3.14-slim-bookworm
-
-RUN groupadd --gid 1000 appuser && \
-    useradd --uid 1000 --gid 1000 --create-home appuser
+FROM python:3.13-slim-trixie  AS build
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
 COPY *.py ./
 COPY src ./src
+COPY requirements.txt .
 
-USER appuser
+RUN pip3 install --upgrade pip
+RUN pip install -r ./requirements.txt
+RUN rm -rf requirements.txt
 
-CMD ["python", "main.py"]
+## Build
+FROM gcr.io/distroless/python3-debian13:latest
+
+COPY --from=build /app /app
+COPY --from=build /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+
+WORKDIR /app
+ENV PYTHONPATH=/usr/local/lib/python3.13/site-packages
+
+USER nonroot:nonroot
+
+CMD ["main.py"]
