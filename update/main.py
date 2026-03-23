@@ -1,16 +1,19 @@
 import logging
 import os
 import psycopg2
-import urllib.request
+from requests import get
+from requests.exceptions import  InvalidSchema
 import json
 import time
 import signal
 import sys
+from load_dotenv import load_dotenv
 
 class operate_db:
     __cache = {}
 
     def __init__(self) -> None:
+        load_dotenv()
         try:
             self.price_uri = os.environ['price_uri']
 
@@ -45,7 +48,8 @@ class operate_db:
             node_data = {}
             for token in tokens:
                 key_val = token.split('=')
-                node_data[key_val[0]] = key_val[1]
+                if len(key_val) >= 2:
+                    node_data[key_val[0]] = key_val[1]
             val = self.query_provider(node_data)
             if val:
                 self.__cache[labels] = val
@@ -55,12 +59,17 @@ class operate_db:
         return self.__cache[labels]
 
     def query_provider(self,node_data) -> float:
-        try:               
-            request = f"http://{self.price_uri}/get?region={node_data['topology.kubernetes.io/region']}&sku={node_data['node.kubernetes.io/instance-type']}&os={node_data['kubernetes.io/os']}"
-            logging.info(request)
-            var = json.loads(urllib.request.urlopen(request).read().decode("utf-8"))
-            return var[0][1]
-        except (KeyError, IndexError) as Ex:
+        try:
+            response = get(
+                f"http://{self.price_uri}/get",
+                params={
+                    "region":node_data['topology.kubernetes.io/region'],
+                    "sku":node_data['node.kubernetes.io/instance-type'],
+                    "os":node_data['kubernetes.io/os']
+            })
+            if response.status_code == 200:
+                return json.loads(response.text)[0][1]
+        except (KeyError, IndexError, InvalidSchema) as Ex:
             logging.error(
                 "Error: no data for: region=%s&sku=%s&os=%s (%s)",
                 node_data.get('topology.kubernetes.io/region', 'MISSING'),
@@ -68,8 +77,9 @@ class operate_db:
                 node_data.get('kubernetes.io/os', 'MISSING'),
                 Ex,
             )
+
     def set_work_item(self, idx, price) -> None:
-        logging.debug(f'Setting at {idx} cost of {price}')        
+        logging.info(f'Setting at {idx} cost of {price}')        
         try:
             self.connection.cursor().execute(
                 "UPDATE klustercost.tbl_nodes SET price_per_hour = %s WHERE idx = %s",
