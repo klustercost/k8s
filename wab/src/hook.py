@@ -5,10 +5,15 @@ from .daemon import handle_message
 app = FastAPI()
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 
-# Health check
+# Homepage
 @app.get("/")
 async def home():
     return {"message": "API is up"}
+
+# Health check
+@app.get("/healthz")
+async def home():
+    return {"status": "ok"}
 
 # Webhook verification
 @app.get("/webhook")
@@ -25,8 +30,6 @@ async def verify_webhook(
 @app.post("/webhook")
 async def handle_webhook(request: Request):
     data = await request.json()
-    #print("Received webhook:", data)
-
     if data:
         for entry in data.get("entry", []):
             for change in entry.get("changes", []):
