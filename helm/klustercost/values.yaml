@@ -62,7 +62,7 @@ mcp:
   client:
     image: ghcr.io/klustercost/k8s/klustercost-mcp-client:latest
     port: 8080
-    serviceType: LoadBalancer
+    serviceType: ClusterIP
     resources:
       requests:
         cpu: 50m
