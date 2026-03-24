@@ -8,8 +8,9 @@ import psycopg2
 from dotenv import load_dotenv
 from openai import OpenAI
 from fastmcp import FastMCP
+from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv("config/env", override=False)
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
