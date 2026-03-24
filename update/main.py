@@ -16,7 +16,7 @@ class operate_db:
     __cache = {}
 
     def __init__(self) -> None:
-        load_dotenv()
+
         try:
             self.price_uri = os.getenv('price_uri')
 
