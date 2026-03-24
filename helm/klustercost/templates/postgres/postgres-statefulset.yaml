@@ -3,15 +3,17 @@ kind: StatefulSet
 metadata:
   name: {{ .Release.Name }}-postgres-statefulset
   namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "klustercost.componentLabels" (dict "context" . "component" "postgres") | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: postgres
+      {{- include "klustercost.componentSelectorLabels" (dict "context" . "component" "postgres") | nindent 6 }}
   template:
     metadata:
       labels:
-        app: postgres
+        {{- include "klustercost.componentLabels" (dict "context" . "component" "postgres") | nindent 8 }}
     spec:
       {{- if .Values.imageRegistry.enabled }}
       imagePullSecrets:

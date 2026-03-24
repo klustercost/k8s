@@ -2,6 +2,8 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Release.Name }}-postgres-scripts
+  labels:
+    {{- include "klustercost.componentLabels" (dict "context" . "component" "postgres") | nindent 4 }}
 data:
 {{- range $path, $_ := (.Files.Glob "sql/*") }}
   {{ trimPrefix "sql/" $path }}: |

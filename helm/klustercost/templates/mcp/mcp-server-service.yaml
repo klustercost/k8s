@@ -4,7 +4,7 @@ apiVersion: v1
 metadata:
   name: {{ .Release.Name }}-mcp-server
   labels:
-    app: {{ .Release.Name }}-mcp-server
+    {{- include "klustercost.componentLabels" (dict "context" . "component" "mcp-server") | nindent 4 }}
 spec:
   ports:
     - name: http
@@ -12,6 +12,6 @@ spec:
       port: {{ .Values.mcp.server.port }}
       targetPort: {{ .Values.mcp.server.port }}
   selector:
-    app: {{ .Release.Name }}-mcp-server
+    {{- include "klustercost.componentSelectorLabels" (dict "context" . "component" "mcp-server") | nindent 4 }}
   type: ClusterIP
 {{- end }}

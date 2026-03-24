@@ -2,15 +2,17 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: {{ .Release.Name }}-monitor
+  labels:
+    {{- include "klustercost.componentLabels" (dict "context" . "component" "monitor") | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: {{ .Release.Name }}-monitor
+      {{- include "klustercost.componentSelectorLabels" (dict "context" . "component" "monitor") | nindent 6 }}
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}-monitor
+        {{- include "klustercost.componentLabels" (dict "context" . "component" "monitor") | nindent 8 }}
     spec:
       {{- if .Values.imageRegistry.enabled }}
       imagePullSecrets:

@@ -3,6 +3,8 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: {{ .Release.Name }}-postgres-pvc
+  labels:
+    {{- include "klustercost.componentLabels" (dict "context" . "component" "postgres") | nindent 4 }}
 spec:
   accessModes:
     - ReadWriteOnce
@@ -10,4 +12,4 @@ spec:
     requests:
       storage: {{ .Values.postgres.pvc.size }}
   storageClassName: {{ .Values.postgres.pvc.storageClassName }}
-  {{- end}}
+{{- end }}
