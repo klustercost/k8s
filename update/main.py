@@ -7,22 +7,25 @@ import json
 import time
 import signal
 import sys
-from load_dotenv import load_dotenv
+from dotenv import load_dotenv
+
+
+load_dotenv(override=False)
 
 class operate_db:
     __cache = {}
 
     def __init__(self) -> None:
-        load_dotenv()
+
         try:
-            self.price_uri = os.environ['price_uri']
+            self.price_uri = os.getenv('price_uri')
 
             self.connection = psycopg2.connect(
-                host=os.environ['host'],
-                database=os.environ['database'],
-                user=os.environ['user'],
-                password=os.environ['password'],
-                port=os.environ['port']
+                host=os.getenv('host'),
+                database=os.getenv('database'),
+                user=os.getenv('user'),
+                password=os.getenv('password'),
+                port=os.getenv('port')
             )
         except KeyError as Ex:
             raise Exception(f"missing an environment variable: {Ex.args[0]}")

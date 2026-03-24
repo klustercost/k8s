@@ -5,6 +5,9 @@ import logging
 import azure
 from enum import Enum
 import os
+from dotenv import load_dotenv
+
+load_dotenv(override=False)
 
 class provider_type(Enum):
     AZURE = 1
@@ -22,7 +25,6 @@ def read_provider():
     if provider_string.lower() == 'gcp':
         return provider_type.GCP
     raise TypeError("Unknown provider type: " + provider_string)
-    
 
 def get_api():
     match read_provider():

@@ -4,6 +4,9 @@ import asyncio
 import logging
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from fastmcp import Client
+from dotenv import load_dotenv
+
+load_dotenv(override=False)
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
