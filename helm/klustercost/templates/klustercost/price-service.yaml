@@ -3,7 +3,7 @@ apiVersion: v1
 metadata:
   name: {{ .Release.Name }}-price
   labels:
-    app: {{ .Release.Name }}-price
+    {{- include "klustercost.componentLabels" (dict "context" . "component" "price") | nindent 4 }}
 spec:
   ports:
     - name: http
@@ -11,7 +11,7 @@ spec:
       port: 80
       targetPort: 5001
   selector:
-    app: {{ .Release.Name }}-price
+    {{- include "klustercost.componentSelectorLabels" (dict "context" . "component" "price") | nindent 4 }}
   type: ClusterIP
   sessionAffinity: None
   internalTrafficPolicy: Cluster
