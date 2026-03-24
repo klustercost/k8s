@@ -5,8 +5,7 @@
       "type": "python",
       "request": "launch",
       "program": "${file}",
-      "console": "integratedTerminal",
-      "envFile": "${workspaceFolder}/config/env",
+      "console": "integratedTerminal"
     },
     {
       "name": "Python: Current File (External Terminal)",
