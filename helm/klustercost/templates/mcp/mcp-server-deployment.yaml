@@ -4,16 +4,16 @@ apiVersion: apps/v1
 metadata:
   name: {{ .Release.Name }}-mcp-server
   labels:
-    app: {{ .Release.Name }}-mcp-server
+    {{- include "klustercost.componentLabels" (dict "context" . "component" "mcp-server") | nindent 4 }}
 spec:
   replicas: {{ .Values.mcp.server.replicas }}
   selector:
     matchLabels:
-      app: {{ .Release.Name }}-mcp-server
+      {{- include "klustercost.componentSelectorLabels" (dict "context" . "component" "mcp-server") | nindent 6 }}
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}-mcp-server
+        {{- include "klustercost.componentLabels" (dict "context" . "component" "mcp-server") | nindent 8 }}
     spec:
       {{- if .Values.imageRegistry.enabled }}
       imagePullSecrets:

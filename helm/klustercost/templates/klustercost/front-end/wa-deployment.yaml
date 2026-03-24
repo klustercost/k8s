@@ -3,15 +3,17 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: {{ .Release.Name }}-wa-frontend
+  labels:
+    {{- include "klustercost.componentLabels" (dict "context" . "component" "frontend") | nindent 4 }}
 spec:
   replicas: {{ .Values.wafrontend.replicas }}
   selector:
     matchLabels:
-      app: {{ .Release.Name }}-wa-frontend
+      {{- include "klustercost.componentSelectorLabels" (dict "context" . "component" "frontend") | nindent 6 }}
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}-wa-frontend
+        {{- include "klustercost.componentLabels" (dict "context" . "component" "frontend") | nindent 8 }}
     spec:
       containers:
         - name: kc-wab
@@ -53,4 +55,4 @@ spec:
               port: {{ .Values.wafrontend.port }}
             initialDelaySeconds: 10
             periodSeconds: 30                     
-{{- end }}          
+{{- end }}

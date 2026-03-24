@@ -2,15 +2,17 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Release.Name }}-update
+  labels:
+    {{- include "klustercost.componentLabels" (dict "context" . "component" "update") | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: {{ .Release.Name }}-update
+      {{- include "klustercost.componentSelectorLabels" (dict "context" . "component" "update") | nindent 6 }}
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}-update
+        {{- include "klustercost.componentLabels" (dict "context" . "component" "update") | nindent 8 }}
     spec:
       {{- if .Values.imageRegistry.enabled }}
       imagePullSecrets:
@@ -22,7 +24,6 @@ spec:
           env:
             - name: price_uri
               value: {{ .Release.Name }}-price.{{ .Release.Namespace }}.svc.cluster.local
-            #db from here
             - name: host
               value: {{ .Release.Name }}-postgres-service.{{ .Release.Namespace }}.svc.cluster.local
             - name: database
