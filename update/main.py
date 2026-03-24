@@ -9,7 +9,7 @@ import sys
 from dotenv import load_dotenv
 
 
-load_dotenv("config/env", override=False)
+load_dotenv(override=False)
 
 class operate_db:
     __cache = {}

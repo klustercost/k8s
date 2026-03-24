@@ -10,7 +10,7 @@ from openai import OpenAI
 from fastmcp import FastMCP
 from dotenv import load_dotenv
 
-load_dotenv("../config/.env", override=False)
+load_dotenv(override=False)
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
