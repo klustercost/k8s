@@ -1,6 +1,6 @@
-from flask import Flask
-from flask import request
-import json
+from fastapi import FastAPI, Query
+from fastapi.responses import JSONResponse
+import uvicorn
 import logging
 import azure
 from enum import Enum
@@ -35,30 +35,25 @@ def get_api():
         case provider_type.GCP:
             raise NotImplementedError()
 
-app = Flask(__name__)
+app = FastAPI()
 
-@app.route('/get')
-def get():
+@app.get('/get')
+def get(region: str = Query(None), sku: str = Query(None), os: str = Query(None)):
     try:
-        region = request.args.get('region')
-        sku = request.args.get('sku')
-        os = request.args.get('os')
-
         if not region:
             raise Exception("Missing region")
         if not sku:
-            raise Exception("Missing sky")
+            raise Exception("Missing sku")
 
-        return json.dumps(get_api().query(region, sku, os))
+        return get_api().query(region, sku, os)
     except Exception as Ex:
-        return str(Ex)
+        return JSONResponse(content=str(Ex), status_code=400)
 
-@app.route('/about')
+@app.get('/about')
 def about():
-    return "{\"about\":\"klustercost Price Server\"}"
+    return {"about": "klustercost Price Server"}
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    from waitress import serve
     logging.info('This is the klustercost price server')
-    serve(app, host="0.0.0.0", port=5001)
+    uvicorn.run(app, host="0.0.0.0", port=5001)
