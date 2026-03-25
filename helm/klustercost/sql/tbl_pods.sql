@@ -25,6 +25,10 @@ CREATE TABLE IF NOT EXISTS klustercost.tbl_pod_data
     "timestamp" timestamp without time zone NOT NULL DEFAULT now(),
     cpu double precision NOT NULL,
     mem double precision NOT NULL,
+    cpu_request double precision DEFAULT NULL,
+    cpu_limit double precision DEFAULT NULL,
+    mem_request double precision DEFAULT NULL,
+    mem_limit double precision DEFAULT NULL,
     CONSTRAINT tbl_pod_data_pkey PRIMARY KEY (idx, idx_pod),
     CONSTRAINT fk_pod_idx FOREIGN KEY (idx_pod)
         REFERENCES klustercost.tbl_pods (idx) MATCH SIMPLE
@@ -39,6 +43,10 @@ CREATE OR REPLACE PROCEDURE klustercost.register_pod_data(
 	IN "arg.node" character varying,
 	IN "arg.cpu" double precision,
 	IN "arg.mem" double precision,
+    IN "arg.cpu_request" double precision DEFAULT NULL,
+    IN "arg.cpu_limit" double precision DEFAULT NULL,
+    IN "arg.mem_request" double precision DEFAULT NULL,
+    IN "arg.mem_limit" double precision DEFAULT NULL,
 	IN "arg.app.name" character varying DEFAULT NULL::character varying,
 	IN "arg.app.instance" character varying DEFAULT NULL::character varying,
 	IN "arg.app.version" character varying DEFAULT NULL::character varying,
@@ -65,8 +73,8 @@ AS $BODY$
         SELECT now() - delay::INTERVAL INTO compare;
         SELECT COUNT(*) INTO sample_count FROM klustercost.tbl_pod_data WHERE idx_pod = pod_id AND timestamp > compare;
         IF sample_count = 0 THEN
-            INSERT INTO klustercost.tbl_pod_data (idx_pod, cpu, mem)
-            VALUES (pod_id, "arg.cpu", "arg.mem");
+            INSERT INTO klustercost.tbl_pod_data (idx_pod, cpu, mem, cpu_request, cpu_limit, mem_request, mem_limit)
+            VALUES (pod_id, "arg.cpu", "arg.mem", "arg.cpu_request", "arg.cpu_limit", "arg.mem_request", "arg.mem_limit");
         END IF;	
 	END;
 $BODY$;

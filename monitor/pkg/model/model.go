@@ -28,6 +28,13 @@ type PodConsumption struct {
 	CPU    *promModel.Sample
 }
 
+type PodResources struct {
+	CPURequest *float64
+	CPULimit   *float64
+	MemRequest *float64
+	MemLimit   *float64
+}
+
 // This struct is used to store the owner_version, owner_kind, owner_name, owner_uid of a *v1.Pod
 // It is used to insert data into the database
 // Used by pod-controller.go and app-controller.go

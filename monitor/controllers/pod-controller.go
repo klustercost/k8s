@@ -135,13 +135,13 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 
 		if pod.Status.Phase == v1.PodRunning {
 			appLabels := c.getAppLabels(pod)
-			//Returns the memory and CPU usage of the pod
+			podResources := c.getResourceRequestsLimits(pod)
 			podUsage, err := c.getPromData(ctx, namespace, name, strconv.Itoa(e.ResyncTime))
 			if err != nil {
 				return err
 			}
 
-			err = persistence.GetPersistInterface().InsertPod(name, namespace, pod.Spec.NodeName, podUsage, appLabels)
+			err = persistence.GetPersistInterface().InsertPod(name, namespace, pod.Spec.NodeName, podUsage, appLabels, podResources)
 
 			if err != nil {
 				c.podqueue.AddRateLimited(obj)
@@ -261,4 +261,44 @@ func (c *PodController) returnMemory(namespace string, metric string, pod string
 
 func (c *PodController) returnCPU(namespace string, pod string, timeRange string) string {
 	return "delta(container_cpu_usage_seconds_total{namespace=\"" + namespace + "\", pod=~\"" + pod + ".*\", container_name!=\"POD\"}[" + timeRange + "s] )/" + timeRange + ""
+}
+
+func (c *PodController) getResourceRequestsLimits(pod *v1.Pod) *model.PodResources {
+	res := &model.PodResources{}
+	var cpuReq, cpuLim, memReq, memLim float64
+	var hasCPUReq, hasCPULim, hasMemReq, hasMemLim bool
+
+	for _, container := range pod.Spec.Containers {
+		if qty, ok := container.Resources.Requests[v1.ResourceCPU]; ok {
+			cpuReq += qty.AsApproximateFloat64()
+			hasCPUReq = true
+		}
+		if qty, ok := container.Resources.Limits[v1.ResourceCPU]; ok {
+			cpuLim += qty.AsApproximateFloat64()
+			hasCPULim = true
+		}
+		if qty, ok := container.Resources.Requests[v1.ResourceMemory]; ok {
+			memReq += qty.AsApproximateFloat64() / 1024 / 1024
+			hasMemReq = true
+		}
+		if qty, ok := container.Resources.Limits[v1.ResourceMemory]; ok {
+			memLim += qty.AsApproximateFloat64() / 1024 / 1024
+			hasMemLim = true
+		}
+	}
+
+	if hasCPUReq {
+		res.CPURequest = &cpuReq
+	}
+	if hasCPULim {
+		res.CPULimit = &cpuLim
+	}
+	if hasMemReq {
+		res.MemRequest = &memReq
+	}
+	if hasMemLim {
+		res.MemLimit = &memLim
+	}
+
+	return res
 }
