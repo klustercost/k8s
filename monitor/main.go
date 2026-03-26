@@ -51,6 +51,7 @@ func main() {
 	logger.Info("Klustercost [Observer]", "v", version.Version)
 
 	defer persistence.Close()
+	persistence.GetPersistInterface()
 
 	config, err := get_config(logger)
 	if err != nil {
