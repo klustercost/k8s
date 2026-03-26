@@ -16,20 +16,36 @@ class operate_db:
     __cache = {}
 
     def __init__(self) -> None:
+        self.price_uri = os.getenv('price_uri')
+        self._connect()
 
-        try:
-            self.price_uri = os.getenv('price_uri')
+    def _connect(self):
+        max_retries = 30
+        retry_delay = 2
 
-            self.connection = psycopg2.connect(
-                host=os.getenv('host'),
-                database=os.getenv('database'),
-                user=os.getenv('user'),
-                password=os.getenv('password'),
-                port=os.getenv('port')
-            )
-        except KeyError as Ex:
-            raise Exception(f"missing an environment variable: {Ex.args[0]}")
-        
+        for attempt in range(1, max_retries + 1):
+            try:
+                logging.info(f"Attempt {attempt} of {max_retries} to connect to the database")
+                self.connection = psycopg2.connect(
+                    host=os.getenv('host'),
+                    database=os.getenv('database'),
+                    user=os.getenv('user'),
+                    password=os.getenv('password'),
+                    port=os.getenv('port')
+                )
+                logging.info("Connected to PostgreSQL")
+                return
+            except psycopg2.OperationalError:
+                if attempt == max_retries:
+                    logging.error("Could not connect to PostgreSQL after %d attempts", max_retries)
+                    raise
+                logging.warning(
+                    "PostgreSQL not ready, retrying in %ds (attempt %d/%d)",
+                    retry_delay, attempt, max_retries,
+                )
+                time.sleep(retry_delay)
+                retry_delay = min(retry_delay * 2, 10)
+
     def get_work_items(self) -> None:
         logging.debug(f'Checking for nodes with no price')
         try:
@@ -42,8 +58,9 @@ class operate_db:
                         self.set_work_item(row[0], price)
                     row = cursor.fetchone()
             self.connection.commit()
-        except psycopg2.DatabaseError as error:
-            logging.error(error)
+        except (psycopg2.DatabaseError, psycopg2.InterfaceError) as error:
+            logging.error("Database error: %s — reconnecting", error)
+            self._connect()
 
     def price_from_labels(self, labels) -> float:
         if not labels in self.__cache:       
@@ -69,7 +86,7 @@ class operate_db:
                     "region":node_data['topology.kubernetes.io/region'],
                     "sku":node_data['node.kubernetes.io/instance-type'],
                     "os":node_data['kubernetes.io/os']
-            })
+            }, timeout=30)
             if response.status_code == 200:
                 return json.loads(response.text)[0][1]
         except (KeyError, IndexError, InvalidSchema) as Ex:
