@@ -20,12 +20,13 @@ class operate_db:
         self._connect()
 
     def _connect(self):
-        max_retries = 30
         retry_delay = 2
+        attempt = 0
 
-        for attempt in range(1, max_retries + 1):
+        while True:
+            attempt += 1
             try:
-                logging.info(f"Attempt {attempt} of {max_retries} to connect to the database")
+                logging.info("Attempt %d to connect to the database", attempt)
                 self.connection = psycopg2.connect(
                     host=os.getenv('host'),
                     database=os.getenv('database'),
@@ -36,15 +37,12 @@ class operate_db:
                 logging.info("Connected to PostgreSQL")
                 return
             except psycopg2.OperationalError:
-                if attempt == max_retries:
-                    logging.error("Could not connect to PostgreSQL after %d attempts", max_retries)
-                    raise
                 logging.warning(
-                    "PostgreSQL not ready, retrying in %ds (attempt %d/%d)",
-                    retry_delay, attempt, max_retries,
+                    "PostgreSQL not ready, retrying in %ds (attempt %d)",
+                    retry_delay, attempt,
                 )
                 time.sleep(retry_delay)
-                retry_delay = min(retry_delay * 2, 10)
+                retry_delay = min(retry_delay * 2, 300)
 
     def get_work_items(self) -> None:
         logging.debug(f'Checking for nodes with no price')
@@ -86,7 +84,7 @@ class operate_db:
                     "region":node_data['topology.kubernetes.io/region'],
                     "sku":node_data['node.kubernetes.io/instance-type'],
                     "os":node_data['kubernetes.io/os']
-            }, timeout=30)
+            })
             if response.status_code == 200:
                 return json.loads(response.text)[0][1]
         except (KeyError, IndexError, InvalidSchema) as Ex:
