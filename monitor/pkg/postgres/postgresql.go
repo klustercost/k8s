@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"klustercost/monitor/pkg/env"
 	"klustercost/monitor/pkg/model"
-	"time"
 
 	_ "github.com/lib/pq"
 	"k8s.io/klog/v2"
@@ -31,25 +30,6 @@ func GetPersistInterface() interface{} {
 		if err != nil {
 			fmt.Println("Error opening the DB connection:", err)
 			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-		}
-		maxRetries := 30
-		retryDelay := 2 * time.Second
-
-		for attempt := 1; attempt <= maxRetries; attempt++ {
-			err = db_connection.Ping()
-			if err == nil {
-				fmt.Println("Connected to PostgreSQL")
-				break
-			}
-			if attempt == maxRetries {
-				fmt.Println("Could not connect to PostgreSQL after", maxRetries, "attempts")
-				klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-			}
-			fmt.Printf("PostgreSQL not ready, retrying in %v (attempt %d/%d)\n", retryDelay, attempt, maxRetries)
-			time.Sleep(retryDelay)
-			if retryDelay < 10*time.Second {
-				retryDelay *= 2
-			}
 		}
 		persistence_impl = &persistence_pg{db_connection}
 	}
