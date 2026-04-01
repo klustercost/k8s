@@ -30,7 +30,7 @@ spec:
                   name: {{ .Release.Name }}-wa-frontend
                   key: ACCESS_TOKEN
             - name: HOST_PORT
-              value: "{{ .Values.wafrontend.port }}"
+              value: "{{ .Values.wafrontend.targetPort }}"
             - name: MCP_CLIENT_ADDRESS
               value: http://{{ .Release.Name }}-mcp-client.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.mcp.client.port }}
           resources:
@@ -41,18 +41,18 @@ spec:
               cpu: {{ .Values.wafrontend.resources.limits.cpu }}
               memory: {{ .Values.wafrontend.resources.limits.memory }}
           ports:
-            - containerPort: {{ .Values.wafrontend.port }}
+            - containerPort: {{ .Values.wafrontend.targetPort }}
               protocol: TCP   
           readinessProbe:
             httpGet:
               path: /healthz
-              port: {{ .Values.wafrontend.port }}
+              port: {{ .Values.wafrontend.targetPort }}
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /healthz
-              port: {{ .Values.wafrontend.port }}
+              port: {{ .Values.wafrontend.targetPort }}
             initialDelaySeconds: 10
             periodSeconds: 30                     
 {{- end }}

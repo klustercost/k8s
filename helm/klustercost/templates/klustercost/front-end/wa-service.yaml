@@ -10,7 +10,7 @@ spec:
     - name: http
       protocol: TCP
       port: {{ .Values.wafrontend.port }}
-      targetPort: {{ .Values.wafrontend.port }}
+      targetPort: {{ .Values.wafrontend.targetPort }}
   selector:
     {{- include "klustercost.componentSelectorLabels" (dict "context" . "component" "frontend") | nindent 4 }}
   type: {{ .Values.wafrontend.serviceType }}

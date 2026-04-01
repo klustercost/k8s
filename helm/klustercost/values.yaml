@@ -82,8 +82,9 @@ mcp:
 
 wafrontend:
   enabled: true
-  port: 5000
-  serviceType: LoadBalancer
+  port: 80
+  targetPort: 5000
+  serviceType: ClusterIP
   replicas: 1
   resources:
     requests:
@@ -92,4 +93,6 @@ wafrontend:
     limits:
       cpu: 200m
       memory: 256Mi
+  accesstoken: "EAAULkPeA7pUBRF131KDftK1eBGxZC29QcKZAx5mrpJEb8W7rZArYQW75CL1A7a1ZAJBLLl7V05XO5ts7mZBzYuLH22SNoRuZBVGrFfRIKrTJhZAZBjitChFdsZC2LRIgHnzkLmIR9sG50Yw3pyj20PZCZBAetuFhMyFlCZAS0NzI55aGgZAYA0O8IkS3zWabRZAvy313a4CQZDZD"
+  verifytoken: "loremipsumyalos" 
   
