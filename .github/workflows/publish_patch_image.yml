@@ -16,7 +16,7 @@ jobs:
     uses: ./.github/workflows/base_build_image.yaml
     with:
       registry: ghcr.io
-      image_name: patcher
+      image_name: klustercost-patcher
       base_folder: patcher
     secrets: 
       token: ${{ secrets.GITHUB_TOKEN }}
