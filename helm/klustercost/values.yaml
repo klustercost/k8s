@@ -82,8 +82,9 @@ mcp:
 
 wafrontend:
   enabled: true
-  port: 5000
-  serviceType: LoadBalancer
+  port: 80
+  targetPort: 5000
+  serviceType: ClusterIP
   replicas: 1
   resources:
     requests:
@@ -92,4 +93,5 @@ wafrontend:
     limits:
       cpu: 200m
       memory: 256Mi
+
   
