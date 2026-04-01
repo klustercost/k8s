@@ -19,11 +19,13 @@ postgresql:
   name: klustercost
   username: klustercost
   password: klustercost
+  tls:
+    enabled: true
   port: 5432
   pvc:
-    enabled: false
-    size: 1Gi
-    storageClass: "default"
+    enabled: true
+    size: 8Gi
+    storageClass: "managed-csi"
   serviceType: ClusterIP
 
 monitor:
@@ -39,7 +41,7 @@ update:
   image: ghcr.io/klustercost/k8s/klustercost-update:latest
 
 prometheus:
-  prometheusServerAddress: "http://prometheus-server.prometheus.svc.cluster.local"
+  prometheusServerAddress: "http://prometheus-server.monitoring.svc.cluster.local"
 
 mcp:
   enabled: true

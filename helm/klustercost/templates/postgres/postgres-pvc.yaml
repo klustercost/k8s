@@ -3,6 +3,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: {{ .Release.Name }}-postgres-pvc
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "klustercost.componentLabels" (dict "context" . "component" "postgres") | nindent 4 }}
 spec:
@@ -10,6 +11,6 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: {{ .Values.postgres.pvc.size }}
-  storageClassName: {{ .Values.postgres.pvc.storageClassName }}
+      storage: {{ .Values.postgresql.pvc.size }}
+  storageClassName: {{ .Values.postgresql.pvc.storageClass }}
 {{- end }}

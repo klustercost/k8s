@@ -19,9 +19,22 @@ spec:
       imagePullSecrets:
         - name: {{ .Release.Name }}-registry-secret
       {{- end }}
+      {{- if .Values.postgresql.tls.enabled }}
+      securityContext:
+        fsGroup: 999
+      {{- end }}
       containers:
       - name: postgres
         image: {{ .Values.postgresql.image }}
+        {{- if .Values.postgresql.tls.enabled }}
+        args:
+          - "-c"
+          - "ssl=on"
+          - '-c'
+          - config_file=/etc/postgresql/postgresql.conf
+          - '-c'
+          - hba_file=/etc/postgresql/pg_hba.conf
+        {{- end }}
         envFrom:
         - configMapRef:
             name: {{ .Release.Name }}-postgres-config
@@ -30,10 +43,33 @@ spec:
         volumeMounts:
         - mountPath: /var/lib/postgresql/data
           name: postgres-storage
+          subPath: data
         - mountPath: /docker-entrypoint-initdb.d
           name: init-scripts
           readOnly: true
+        {{- if .Values.postgresql.tls.enabled }}
+        - name: config
+          mountPath: /etc/postgresql/
+        - name: postgres-tls
+          readOnly: true
+          mountPath: /tls
+        {{- end }}
       volumes:
+      {{- if .Values.postgresql.tls.enabled }}
+      - name: config
+        configMap:
+          name: {{ .Release.Name }}-postgres-config
+          items:
+            - key: postgresql.conf
+              path: postgresql.conf
+            - key: pg_hba.conf
+              path: pg_hba.conf
+          defaultMode: 420
+      - name: postgres-tls
+        secret:
+          secretName: postgres-tls
+          defaultMode: 384
+      {{- end }}
       - name: postgres-storage
         {{- if .Values.postgresql.pvc.enabled }}
         persistentVolumeClaim:

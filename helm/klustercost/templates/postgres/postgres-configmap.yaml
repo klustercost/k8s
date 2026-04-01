@@ -2,9 +2,22 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Release.Name }}-postgres-config
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "klustercost.componentLabels" (dict "context" . "component" "postgres") | nindent 4 }}
 data:
   POSTGRES_DB: {{ .Values.postgresql.name }}
   POSTGRES_USER: {{ .Values.postgresql.username }}
   POSTGRES_PASSWORD: {{ .Values.postgresql.password }}
+  {{- if .Values.postgresql.tls.enabled }}
+  pg_hba.conf: |
+    # Allow local connections
+    local all all trust
+    # Force SSL for all external connections
+    host all all 0.0.0.0/0 md5
+  postgresql.conf: |
+    ssl = on
+    ssl_cert_file = '/tls/server.crt'
+    ssl_key_file = '/tls/server.key'
+    listen_addresses = '*'
+{{- end }}
