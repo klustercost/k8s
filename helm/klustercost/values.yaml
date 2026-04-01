@@ -41,7 +41,7 @@ update:
   image: ghcr.io/klustercost/k8s/klustercost-update:latest
 
 prometheus:
-  prometheusServerAddress: "http://prometheus-server.monitoring.svc.cluster.local"
+  prometheusServerAddress: "http://prometheus-server.prometheus.svc.cluster.local"
 
 mcp:
   enabled: true
