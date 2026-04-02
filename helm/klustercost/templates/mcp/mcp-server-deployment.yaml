@@ -35,6 +35,8 @@ spec:
                   key: OPENAI_API_KEY
             - name: OPENAI_MODEL
               value: {{ .Values.mcp.openai.model | quote }}
+            - name: OPENAI_ANSWER_MODEL
+              value: {{ .Values.mcp.openai.answerModel | quote }}
             - name: PG_HOST
               value: {{ .Release.Name }}-postgres-service.{{ .Release.Namespace }}.svc.cluster.local
             - name: PG_PORT

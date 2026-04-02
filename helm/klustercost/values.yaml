@@ -76,6 +76,7 @@ mcp:
   openai:
     apiKey: ""
     model: "gpt-5.4-mini"
+    answerModel: "gpt-5.4-mini"
 
   postgresql:
     schema: "klustercost"

@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from fastmcp import FastMCP
 from dotenv import load_dotenv
+from answer_formatter import format_answer
 
 load_dotenv(override=False)
 
@@ -28,6 +29,7 @@ with open(PROMPT_FILE, encoding="utf-8") as f:
 # --- Configuration from .env ---
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
+OPENAI_ANSWER_MODEL = os.getenv("OPENAI_ANSWER_MODEL", OPENAI_MODEL)
 PG_HOST = os.getenv("PG_HOST", "localhost")
 PG_PORT = int(os.getenv("PG_PORT", "5432"))
 PG_USER = os.getenv("PG_USER", "postgres")
@@ -137,8 +139,10 @@ def run_query(sql: str) -> list[dict]:
 def ask_db(question: str) -> str:
     """Ask a natural-language question about the PostgreSQL database.
 
-    The question is converted to SQL via OpenAI, executed, and the
-    results are returned as JSON.
+    The question is converted to SQL via OpenAI, executed, and the results
+    are returned as a JSON object with two keys:
+      - "raw":     the structured query results (list of row objects)
+      - "natural": a human-readable, conversational answer (or null on failure)
     """
     log.info("──── New question received ────")
     log.info("User question: %s", question)
@@ -148,13 +152,26 @@ def ask_db(question: str) -> str:
         sql = generate_sql(question, schema)
         if sql.strip() == "REFUSE":
             log.warning("Question refused by LLM (off-topic)")
-            return "Sorry, I can only answer questions about the Kubernetes cluster database."
+            return json.dumps({
+                "raw": "Sorry, I can only answer questions about the Kubernetes cluster database.",
+                "natural": "Sorry, I can only answer questions about the Kubernetes cluster database.",
+            }, indent=2)
         rows = run_query(sql)
     except Exception as e:
         sql_info = f"\nGenerated SQL was:\n{sql}" if sql else ""
         log.error("ask_db failed: %s%s", e, sql_info)
-        return f"Error: {e}{sql_info}"
-    result = json.dumps(rows, indent=2, default=str)
+        return json.dumps({
+            "raw": f"Error: {e}{sql_info}",
+            "natural": f"Error: {e}{sql_info}",
+        }, indent=2)
+
+    natural = None
+    try:
+        natural = format_answer(question, json.dumps(rows, default=str), openai_client, OPENAI_ANSWER_MODEL)
+    except Exception as e:
+        log.error("Answer formatting failed: %s", e)
+
+    result = json.dumps({"raw": rows, "natural": natural}, indent=2, default=str)
     log.info("Returning %d row(s) to client", len(rows))
     log.debug("Full result payload:\n%s", result)
     log.info("──── Question complete ────")
