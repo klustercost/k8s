@@ -15,7 +15,7 @@ spec:
           containers:
           - name: ip-updater
             image: {{ .Values.powerbi.image }}
-            imagePullPolicy: IfNotPresent
+            imagePullPolicy: Always
             env:
               - name: URI_LOCATION
                 value: {{ .Values.powerbi.configUri }}
@@ -28,4 +28,6 @@ spec:
               - name: NAMESPACE
                 value: {{ .Release.Namespace }}
           restartPolicy: OnFailure
+          serviceAccountName: klustercost
+          serviceAccount: klustercost             
 {{- end }}
