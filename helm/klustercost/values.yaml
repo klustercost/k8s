@@ -100,7 +100,7 @@ wafrontend:
 
 powerbi:
   enabled: true
-  image: ghcr.io/klustercost/k8s/klustercost-mcp-client:latest
+  image: ghcr.io/klustercost/k8s/klustercost-patcher:latest
   configUri: https://download.microsoft.com/download/7/1/d/71d86715-5596-4529-9b13-da13a5de5b63/ServiceTags_Public_20260323.json
   extract: "$.values[?(@.name == 'PowerBI')].properties.addressPrefixes.*"
   additionalIps: '["78.96.125.106/32","86.124.18.157/32"]'
