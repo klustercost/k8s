@@ -6,7 +6,10 @@ import json
 from kubernetes import client, config
 
 logging.basicConfig(level=logging.INFO)
-config.load_kube_config()
+if environ.get('RUN_LOCAL') is None:
+    config.load_incluster_config()
+else:
+    config.load_kube_config()
 v1 = client.CoreV1Api()
 
 def get_data():
