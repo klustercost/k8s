@@ -1,0 +1,31 @@
+{{- if .Values.powerbi.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-postgres-powerbi-ip-updater
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "klustercost.componentLabels" (dict "context" . "component" "postgres") | nindent 4 }}
+spec:
+  schedule: "* 7 * * 0"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: ip-updater
+            image: {{ .Values.powerbi.image }}
+            imagePullPolicy: IfNotPresent
+            env:
+              - name: URI_LOCATION
+                value: {{ .Values.powerbi.configUri }}
+              - name: JSON_PATH_EXTRACT
+                value: {{ .Values.powerbi.extract }}
+              - name: EXTRA_ITEMS_JSON
+                value: {{ .Values.powerbi.additionalIps | quote }}
+              - name: SERVICE_TO_PATCH
+                value: {{ .Release.Name }}-postgres-service
+              - name: NAMESPACE
+                value: {{ .Release.Namespace }}
+          restartPolicy: OnFailure
+{{- end }}
