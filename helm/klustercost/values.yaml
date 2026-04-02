@@ -93,6 +93,8 @@ wafrontend:
     limits:
       cpu: 200m
       memory: 256Mi
+  accesstoken:
+  verifytoken:
 
 powerbi:
   enabled: true
