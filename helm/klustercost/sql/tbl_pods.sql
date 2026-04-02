@@ -78,3 +78,18 @@ AS $BODY$
         END IF;	
 	END;
 $BODY$;
+
+CREATE OR REPLACE VIEW klustercost.tbl_pod_data_verbose
+ AS
+ SELECT idx,
+    idx_pod,
+    "timestamp",
+    cpu,
+    mem,
+    cpu_request,
+    cpu_limit,
+    mem_request,
+    mem_limit,
+    to_char("timestamp", 'DD/MM/YYYY'::text) AS date,
+    to_char("timestamp", 'HH24'::text) AS hour
+   FROM tbl_pod_data;
