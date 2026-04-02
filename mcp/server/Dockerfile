@@ -8,7 +8,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY my_server.py system_prompt.txt ./
+COPY my_server.py system_prompt.txt answer_formatter.py answer_prompt.txt ./
 
 USER appuser
 
