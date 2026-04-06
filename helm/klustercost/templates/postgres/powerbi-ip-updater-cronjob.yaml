@@ -7,7 +7,7 @@ metadata:
   labels:
     {{- include "klustercost.componentLabels" (dict "context" . "component" "postgres") | nindent 4 }}
 spec:
-  schedule: "* 7 * * 0"
+  schedule: "0 7 * * 0"
   jobTemplate:
     spec:
       template:
