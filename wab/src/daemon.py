@@ -14,4 +14,4 @@ def handle_message(message, phone_number_id):
     natural_response = json.loads(response)["natural"]
     logger.log.info(f"Handling from ${sender_id} request ${response} with answer ${natural_response}")
     send_message(sender_id,natural_response,phone_number_id)
-    send_templated_message(sender_id, TEMPLATE, phone_number_id, "xxx", crt_context)
+    send_templated_message(sender_id, TEMPLATE, phone_number_id, "this request", crt_context)
