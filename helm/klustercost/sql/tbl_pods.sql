@@ -9,12 +9,12 @@ CREATE TABLE IF NOT EXISTS klustercost.tbl_pods
     name character varying(63) COLLATE pg_catalog."default",
     namespace character varying(253) COLLATE pg_catalog."default",
     node character varying(253) COLLATE pg_catalog."default",
-    "app.name" character varying(63) COLLATE pg_catalog."default",
-    "app.instance" character varying(63) COLLATE pg_catalog."default",
-    "app.version" character varying(63) COLLATE pg_catalog."default",
-    "app.component" character varying(63) COLLATE pg_catalog."default",
-    "app.part-of" character varying(63) COLLATE pg_catalog."default",
-    "app.managed-by" character varying(63) COLLATE pg_catalog."default",
+    "app.name" character varying(63) COLLATE pg_catalog."default" DEFAULT 'unclasified'::character varying,
+    "app.instance" character varying(63) COLLATE pg_catalog."default" DEFAULT 'unclasified'::character varying,
+    "app.version" character varying(63) COLLATE pg_catalog."default" DEFAULT 'unclasified'::character varying,
+    "app.component" character varying(63) COLLATE pg_catalog."default" DEFAULT 'unclasified'::character varying,
+    "app.part-of" character varying(63) COLLATE pg_catalog."default" DEFAULT 'unclasified'::character varying,
+    "app.managed-by" character varying(63) COLLATE pg_catalog."default" DEFAULT 'unclasified'::character varying,
     CONSTRAINT tbl_pods_pkey PRIMARY KEY (idx)
 );
 
@@ -90,6 +90,6 @@ CREATE OR REPLACE VIEW klustercost.tbl_pod_data_verbose
     cpu_limit,
     mem_request,
     mem_limit,
-    to_char("timestamp", 'DD/MM/YYYY'::text) AS date,
-    to_char("timestamp", 'HH24'::text) AS hour
+	"timestamp"::date as date,
+	to_char("timestamp", 'HH24'::text)::int AS hour
    FROM tbl_pod_data;
