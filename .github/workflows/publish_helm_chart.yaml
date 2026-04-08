@@ -1,0 +1,28 @@
+name: Publish Helm chart
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - helm/**
+  workflow_dispatch:
+
+jobs:
+  publish-chart:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Package chart
+        run: helm package helm/klustercost
+      - name: Push chart
+        run: |
+          PKG=$(ls klustercost-*.tgz)
+          helm push "$PKG" oci://ghcr.io/${{ github.repository }}
