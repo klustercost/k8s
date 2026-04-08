@@ -1,0 +1,20 @@
+name: Create and publish the website
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - website/**
+  workflow_dispatch:      
+jobs:
+  build-and-push-image:
+    permissions:
+      packages: write
+    uses: ./.github/workflows/base_build_image.yaml
+    with:
+      registry: ghcr.io
+      image_name: klustercost-website
+      base_folder: website
+    secrets: 
+      token: ${{ secrets.GITHUB_TOKEN }}
