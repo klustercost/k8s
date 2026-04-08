@@ -94,16 +94,19 @@
   const queries = [
     {
       question: 'Which pod consumed the most CPU in the last hour?',
+      natural: 'The api-gateway pod in production used the most CPU at 845 millicores, followed by worker-batch in jobs at 612m.',
       response:
         '[\n  { "pod": "api-gateway-7f8b5d", "cpu": "845m", "namespace": "production" },\n  { "pod": "worker-batch-3a2c",  "cpu": "612m", "namespace": "jobs" }\n]',
     },
     {
       question: 'What is the total cost per namespace this week?',
+      natural: 'Production is your most expensive namespace at $142.38 this week. Staging costs $47.20 and jobs is at $31.05.',
       response:
         '[\n  { "namespace": "production", "cost": "$142.38" },\n  { "namespace": "staging",    "cost": "$47.20" },\n  { "namespace": "jobs",       "cost": "$31.05" }\n]',
     },
     {
       question: 'Show nodes with no price assigned yet',
+      natural: 'One node is missing pricing data: aks-pool2-vm3 running a Standard_D4s_v3 SKU. It may need a manual price entry.',
       response:
         '[\n  { "node": "aks-pool2-vm3", "sku": "Standard_D4s_v3", "price": null }\n]',
     },
@@ -113,6 +116,7 @@
   const cursorEl = document.getElementById('cursor-blink');
   const responseEl = document.getElementById('typed-response');
   const responseContent = document.getElementById('response-content');
+  const responseNatural = document.getElementById('response-natural');
 
   if (!typedEl) return;
 
@@ -127,6 +131,7 @@
     let maxH = 0;
     queries.forEach((q) => {
       typedEl.textContent = q.question;
+      responseNatural.textContent = q.natural;
       responseContent.textContent = q.response;
       maxH = Math.max(maxH, dynamicArea.offsetHeight);
     });
@@ -134,6 +139,7 @@
     dynamicArea.style.minHeight = maxH + 'px';
 
     typedEl.textContent = '';
+    responseNatural.textContent = '';
     responseEl.style.visibility = '';
     responseEl.style.opacity = '';
     responseEl.classList.add('invisible', 'opacity-0');
@@ -161,6 +167,7 @@
         cursorEl.style.display = 'none';
 
         setTimeout(() => {
+          responseNatural.textContent = current.natural;
           responseContent.textContent = current.response;
           responseEl.classList.remove('invisible', 'opacity-0');
         }, 300);
