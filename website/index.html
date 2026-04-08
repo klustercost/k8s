@@ -269,6 +269,7 @@
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center mb-10 sm:mb-16">
         <h2 class="animate-on-scroll text-3xl sm:text-4xl font-bold text-white mb-4">
+          Klustercost is <br/>
           Everything You Need for <span class="gradient-text">Cost Clarity</span>
         </h2>
         <p class="animate-on-scroll text-lg text-slate-400 max-w-2xl mx-auto">
@@ -469,8 +470,7 @@
                   Copy
                 </button>
               </div>
-              <pre class="p-3 sm:p-4 font-mono text-xs sm:text-sm text-slate-300 overflow-x-auto"><code>git clone https://github.com/klustercost/k8s.git
-cd k8s</code></pre>
+              <pre class="p-3 sm:p-4 font-mono text-xs sm:text-sm text-slate-300 overflow-x-auto"><code>helm pull oci://ghcr.io/klustercost/k8s/klustercost</code></pre>
             </div>
           </div>
         </div>
@@ -489,12 +489,13 @@ cd k8s</code></pre>
                 </button>
               </div>
               <pre class="p-3 sm:p-4 font-mono text-xs sm:text-sm text-slate-300 overflow-x-auto"><code># helm/klustercost/values.yaml
-postgresql:
-  password: "your-secure-password"
+global:
+  appName: "klustercost"
+  extraLabels: {}
 mcp:
   enabled: true
   openai:
-    apiKey: "sk-proj-..."</code></pre>
+    apiKey: "sk-..."</code></pre>
             </div>
           </div>
         </div>
