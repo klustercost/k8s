@@ -96,7 +96,7 @@
       question: 'Which pod consumed the most CPU in the last hour?',
       natural: 'The api-gateway pod in production used the most CPU at 845 millicores, followed by worker-batch in jobs at 612m.',
       response:
-        '[\n  { "pod": "api-gateway-7f8b5d", "cpu": "845m", "namespace": "production" },\n  { "pod": "worker-batch-3a2c",  "cpu": "612m", "namespace": "jobs" }\n]',
+        '[\n  { "pod": "api-gateway", "cpu": "845m", "namespace": "prod" },\n  { "pod": "worker-batch",  "cpu": "612m", "namespace": "jobs" }\n]',
     },
     {
       question: 'What is the total cost per namespace this week?',
@@ -108,7 +108,7 @@
       question: 'Show nodes with no price assigned yet',
       natural: 'One node is missing pricing data: aks-pool2-vm3 running a Standard_D4s_v3 SKU. It may need a manual price entry.',
       response:
-        '[\n  { "node": "aks-pool2-vm3", "sku": "Standard_D4s_v3", "price": null }\n]',
+        '[\n  { "node": "aks-pool2-vm3", "sku": "Standard_D4s_v3", "price": 0}\n]',
     },
   ];
 
