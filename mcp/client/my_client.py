@@ -1,8 +1,9 @@
 import os
 import logging
+from json import JSONDecodeError
 
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastmcp import Client
 from dotenv import load_dotenv
@@ -51,29 +52,33 @@ async def ask(question: str) -> dict:
         return {"answer": payload}
 
 
+async def query_from_body(request: Request):
+    try:    
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise HTTPException(status_code=400, detail={"error": "Expected JSON object"})
+        question = body.get("question")
+        if not isinstance(question, str) or not question.strip():
+            raise HTTPException(status_code=400, detail={"error": "Missing or empty 'question' field"})
+        log.info("──── New question received ────")
+        log.info(f"User question: {question}")
+        return question
+    except JSONDecodeError:
+        raise HTTPException(status_code=400, detail={"error": "Expect json body"})
+
 @app.post("/ask")
 async def post_ask(request: Request):
-    try:
-        body = await request.json()
-    except Exception:
-        return JSONResponse(status_code=400, content={"error": "Invalid JSON"})
-    question = body.get("question") if isinstance(body, dict) else None
-    if not isinstance(question, str) or not question.strip():
-        return JSONResponse(status_code=400, content={"error": "Missing or empty 'question' field"})
-    question = question.strip()
-
-    log.info("──── New question received ────")
-    log.info("User question: %s", question)
+    question = await query_from_body(request)
 
     try:
         result = await ask(question)
-    except Exception:
-        log.exception("Failed to process question")
-        return JSONResponse(status_code=500, content={"error": "Internal server error"})
+    except Exception as e:
+        log.exception(f"Failed to process question {e}")
+        raise HTTPException(status_code=500, detail={"error": "Internal server error"})
 
     log.info("──── Question complete ────")
     if "error" in result:
-        return JSONResponse(status_code=500, content=result)
+        raise HTTPException(status_code=500, detail=result)
     return result
 
 
