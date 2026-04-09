@@ -1,2 +1,4 @@
+fastapi
 fastmcp
 python-dotenv==1.2.2
+uvicorn
