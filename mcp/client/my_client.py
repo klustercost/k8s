@@ -2,10 +2,9 @@ import os
 import logging
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastmcp import Client
-from pydantic import BaseModel, field_validator
 from dotenv import load_dotenv
 
 load_dotenv(override=False)
@@ -31,36 +30,43 @@ MCP_CLIENT_PORT = int(os.getenv("MCP_CLIENT_PORT", "8080"))
 app = FastAPI(title="MCP Client", docs_url=None, redoc_url=None)
 
 
-class AskRequest(BaseModel):
-    question: str
-
-    @field_validator("question")
-    @classmethod
-    def question_not_blank(cls, v: str) -> str:
-        stripped = v.strip()
-        if not stripped:
-            raise ValueError("question must not be blank")
-        return stripped
+MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "120"))
 
 
 async def ask(question: str) -> dict:
     """Forward a question to the MCP server and return the result."""
     async with Client(MCP_SERVER_URL) as mcp:
-        result = await mcp.call_tool("ask_db", {"question": question})
+        result = await mcp.call_tool(
+            "ask_db",
+            {"question": question},
+            raise_on_error=False,
+            timeout=MCP_TIMEOUT,
+        )
         if result.is_error:
-            log.error(result.data)
-            return {"error": str(result.data)}
-        log.info(result.data)
-        return {"answer": result.data}
+            text = result.data or result.content[0].text
+            log.error(text)
+            return {"error": str(text)}
+        payload = result.data if result.data is not None else result.structured_content
+        log.info(payload)
+        return {"answer": payload}
 
 
 @app.post("/ask")
-async def post_ask(body: AskRequest):
+async def post_ask(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "Invalid JSON"})
+    question = body.get("question") if isinstance(body, dict) else None
+    if not isinstance(question, str) or not question.strip():
+        return JSONResponse(status_code=400, content={"error": "Missing or empty 'question' field"})
+    question = question.strip()
+
     log.info("──── New question received ────")
-    log.info("User question: %s", body.question)
+    log.info("User question: %s", question)
 
     try:
-        result = await ask(body.question)
+        result = await ask(question)
     except Exception:
         log.exception("Failed to process question")
         return JSONResponse(status_code=500, content={"error": "Internal server error"})
