@@ -1,0 +1,17 @@
+{{- if .Values.teams.enabled }}
+kind: Service
+apiVersion: v1
+metadata:
+  name: {{ .Release.Name }}-teams-frontend
+  labels:
+    {{- include "klustercost.componentLabels" (dict "context" . "component" "teams-frontend") | nindent 4 }}
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: {{ .Values.teams.port }}
+      targetPort: {{ .Values.teams.targetPort }}
+  selector:
+    {{- include "klustercost.componentSelectorLabels" (dict "context" . "component" "teams-frontend") | nindent 4 }}
+  type: {{ .Values.teams.serviceType }}
+{{- end }}
