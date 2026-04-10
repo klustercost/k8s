@@ -11,7 +11,7 @@ from query_data import query
 
 logging.basicConfig(level=logging.INFO)
 
-config = Config()
+config = Config('TENANT_ID', 'CLIENT_ID', 'BOT_TYPE', 'MCP_CLIENT_ADDRESS')
 
 def create_token_factory():
     def get_token(scopes, tenant_id=None):
