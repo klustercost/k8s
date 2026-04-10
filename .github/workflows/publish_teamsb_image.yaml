@@ -1,0 +1,22 @@
+name: Create and publish the teams bot
+
+# Configures this workflow to run every time a change is pushed to main.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - chat/teams/**
+  workflow_dispatch:      
+jobs:
+  build-and-push-image:
+    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
+    permissions:
+      packages: write
+    uses: ./.github/workflows/base_build_image.yaml
+    with:
+      registry: ghcr.io
+      image_name: klustercost-teamsb
+      base_folder: chat/teams
+    secrets: 
+      token: ${{ secrets.GITHUB_TOKEN }}
