@@ -3,7 +3,7 @@ import re
 import json
 import logging
 
-from azure.identity import ManagedIdentityCredential
+from azure.identity import WorkloadIdentityCredential
 from microsoft_teams.api import MessageActivity, TypingActivityInput
 from microsoft_teams.apps import ActivityContext, App
 from config import Config
@@ -15,7 +15,7 @@ config = Config()
 
 def create_token_factory():
     def get_token(scopes, tenant_id=None):
-        credential = ManagedIdentityCredential(client_id=config.APP_ID)
+        credential = WorkloadIdentityCredential(client_id=config.APP_ID)
         if isinstance(scopes, str):
             scopes_list = [scopes]
         else:
