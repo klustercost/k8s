@@ -83,6 +83,7 @@ mcp:
 
 wafrontend:
   enabled: true
+  image: ghcr.io/klustercost/k8s/klustercost-wab:latest
   port: 80
   targetPort: 5000
   serviceType: ClusterIP
@@ -105,4 +106,21 @@ powerbi:
   extract: "$.values[?(@.name == 'PowerBI')].properties.addressPrefixes.*"
   #additionalIps: '["1.2.3.4/32","5.6.7.8/32"]'
   additionalIps: "{}"
-  
+
+teams:
+  enabled: true
+  image: ghcr.io/klustercost/k8s/klustercost-teamsb:latest
+  replicas: 1
+  port: 80
+  targetPort: 8080
+  serviceType: ClusterIP
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  tenantId: ""
+  clientId: ""
+  botType: "UserAssignedMsi"
