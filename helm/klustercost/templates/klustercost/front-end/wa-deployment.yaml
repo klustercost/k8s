@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: kc-wab
-          image: ghcr.io/klustercost/k8s/klustercost-wab:latest
+          image: {{ .Values.wafrontend.image }}
           env:
             - name: VERIFY_TOKEN
               valueFrom:

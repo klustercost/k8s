@@ -1,0 +1,44 @@
+{{- if .Values.teams.enabled }}
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: {{ .Release.Name }}-teams-frontend
+  labels:
+    {{- include "klustercost.componentLabels" (dict "context" . "component" "teams-frontend") | nindent 4 }}
+spec:
+  replicas: {{ .Values.teams.replicas }}
+  selector:
+    matchLabels:
+      {{- include "klustercost.componentSelectorLabels" (dict "context" . "component" "teams-frontend") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "klustercost.componentLabels" (dict "context" . "component" "teams-frontend") | nindent 8 }}
+    spec:
+      serviceAccountName: azure-bot-sa
+      containers:
+      - env:
+        - name: PORT
+          value: {{ .Values.teams.targetPort }}
+        - name: MCP_CLIENT_ADDRESS
+          value:  http://{{ .Release.Name }}-mcp-client.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.mcp.client.port }}
+        - name: BOT_TYPE
+          value: {{ .Values.teams.botType }}
+        - name: CLIENT_ID
+          value: {{ .Values.teams.clientId }}
+        - name: TENANT_ID
+          value: {{ .Values.teams.tenantId }}
+        image: {{ .Values.teams.image }}
+        imagePullPolicy: Always
+        name: kc-teamsb
+        ports:
+        - containerPort: {{ .Values.teams.targetPort }}
+          protocol: TCP
+        resources:
+            requests:
+              cpu: {{ .Values.teams.resources.requests.cpu }}
+              memory: {{ .Values.teams.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.teams.resources.limits.cpu }}
+              memory: {{ .Values.teams.resources.limits.memory }}
+{{- end }}
