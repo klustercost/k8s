@@ -6,12 +6,40 @@ import logging
 from azure.identity import WorkloadIdentityCredential
 from microsoft_teams.api import MessageActivity, TypingActivityInput
 from microsoft_teams.apps import ActivityContext, App
+from microsoft_teams.cards import AdaptiveCard, TextBlock, DonutChart, DonutChartData, ActionSet
 from config import Config
 from query_data import query
 
 logging.basicConfig(level=logging.INFO)
 
 config = Config('TENANT_ID', 'CLIENT_ID', 'BOT_TYPE', 'MCP_CLIENT_ADDRESS')
+
+def make_test_card():
+    return AdaptiveCard(
+        schema="http://adaptivecards.io/schemas/adaptive-card.json",
+        version="1.6",
+        body=[
+            TextBlock(
+                text="The chart below shouws this data",
+                wrap=True
+            ),
+            DonutChart(
+                title="Data Chart",
+                data=[
+                    DonutChartData(key="Category A", value=30),
+                    DonutChartData(key="Category B", value=50),
+                    DonutChartData(key="Category c", value=20)
+                ]
+            ),
+            ActionSet(actions=[
+                {
+                    "type": "Action.OpenUrl",
+                    "url": "https://app.powerbi.com/groups/me/reports/65dad606-1ab5-4faa-b6fb-fd69e3751e4f/75c3436379060bbd7ab0",
+                    "title": "More details",
+                }
+            ]),
+        ]
+    )
 
 def create_token_factory():
     def get_token(scopes, tenant_id=None):
@@ -40,6 +68,7 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
     natural_response = json.loads(response)["natural"]
     logging.info(f"Handling from {ctx.connection_name} request {response} with answer {natural_response}")
     await ctx.send(f"{natural_response}")
+    await ctx.send(make_test_card())
 
 if __name__ == "__main__":
     asyncio.run(app.start())
