@@ -14,22 +14,30 @@ logging.basicConfig(level=logging.INFO)
 
 config = Config('TENANT_ID', 'CLIENT_ID', 'BOT_TYPE', 'MCP_CLIENT_ADDRESS')
 
-def make_test_card():
+def donuts_from_items(items):
+    data = []
+    key = None
+    val = None
+    for item in items:
+        if key is None:
+            keys = iter(item)
+            key =  next(keys)
+            val =  next(keys)
+        data.append(DonutChartData(legend=item[key], value=item[val]))
+    return data
+
+def make_test_card(donut_data):
     return AdaptiveCard(
         schema="http://adaptivecards.io/schemas/adaptive-card.json",
         version="1.6",
         body=[
             TextBlock(
-                text="The chart below shouws this data",
+                text="The chart below shows this data",
                 wrap=True
             ),
             DonutChart(
                 title="Data Chart",
-                data=[
-                    DonutChartData(key="Category A", value=30),
-                    DonutChartData(key="Category B", value=50),
-                    DonutChartData(key="Category c", value=20)
-                ]
+                data=donut_data
             ),
             ActionSet(actions=[
                 {
@@ -64,11 +72,12 @@ async def handle_greeting(ctx: ActivityContext[MessageActivity]) -> None:
 @app.on_message
 async def handle_message(ctx: ActivityContext[MessageActivity]):
     await ctx.reply(TypingActivityInput())
-    response = query(config.MCP_CLIENT_ADDRESS, ctx.activity.text)
-    natural_response = json.loads(response)["natural"]
+    response = json.loads(query(config.MCP_CLIENT_ADDRESS, ctx.activity.text))
+    natural_response = response["natural"]
     logging.info(f"Handling from {ctx.connection_name} request {response} with answer {natural_response}")
     await ctx.send(f"{natural_response}")
-    await ctx.send(make_test_card())
+    if type(response["raw"]) == list and len(response["raw"]) > 3:
+        await ctx.send(make_test_card(donuts_from_items(response["raw"])))
 
 if __name__ == "__main__":
     asyncio.run(app.start())
