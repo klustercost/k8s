@@ -7,7 +7,7 @@ from functools import lru_cache
 import psycopg2
 from dotenv import load_dotenv
 from openai import OpenAI
-from fastmcp import FastMCP
+from fastmcp import FastMCP, Context
 from dotenv import load_dotenv
 from answer_formatter import format_answer
 
@@ -88,25 +88,27 @@ def get_schema_info() -> str:
             conn.close()
 
 
-def generate_sql(question: str, schema: str) -> str:
+def generate_sql(question: str, schema: str, response_id: str = None) -> str:
     """Ask OpenAI to produce a read-only SQL query for the given question."""
     log.info("Generating SQL via OpenAI (model=%s) …", OPENAI_MODEL)
     t0 = time.perf_counter()
-    response = openai_client.chat.completions.create(
+
+    response = openai_client.responses.create(
         model=OPENAI_MODEL,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT_TEMPLATE.format(schema=schema)},
-            {"role": "user", "content": question},
-        ],
-        temperature=0,
+        previous_response_id=response_id,
+        instructions=SYSTEM_PROMPT_TEMPLATE.format(schema=schema),
+        input=question
     )
+
+    response_id = response.id
+
     elapsed = time.perf_counter() - t0
-    content = response.choices[0].message.content
+    content = response.output_text
     if content is None:
         raise ValueError("OpenAI returned an empty response — no SQL was generated")
     sql = content.strip()
     log.info("SQL generated in %.2fs:\n%s", elapsed, sql)
-    return sql
+    return sql, response_id
 
 
 def run_query(sql: str) -> list[dict]:
@@ -136,7 +138,7 @@ def run_query(sql: str) -> list[dict]:
 # --- MCP Tools ---
 
 @mcp.tool
-def ask_db(question: str) -> str:
+async def ask_db(question: str, user_id: str | None, ctx: Context) -> str:
     """Ask a natural-language question about the PostgreSQL database.
 
     The question is converted to SQL via OpenAI, executed, and the results
@@ -146,10 +148,11 @@ def ask_db(question: str) -> str:
     """
     log.info("──── New question received ────")
     log.info("User question: %s", question)
+    log.info(f"User question: {user_id}")
     sql = None
     try:
         schema = get_schema_info()
-        sql = generate_sql(question, schema)
+        sql, response_id = generate_sql(question, schema, user_id)
         if sql.strip() == "REFUSE":
             log.warning("Question refused by LLM (off-topic)")
             return json.dumps({
@@ -171,10 +174,15 @@ def ask_db(question: str) -> str:
     except Exception as e:
         log.error("Answer formatting failed: %s", e)
 
-    result = json.dumps({"raw": rows, "natural": natural}, indent=2, default=str)
+    result = json.dumps({"response_id": response_id, "raw": rows, "natural": natural}, indent=2, default=str)
     log.info("Returning %d row(s) to client", len(rows))
     log.debug("Full result payload:\n%s", result)
     log.info("──── Question complete ────")
+
+    # Append the current exchange to history
+    history.append({"question": question, "answer": natural})
+    await ctx.set_state("history", history)
+
     return result
 
 
