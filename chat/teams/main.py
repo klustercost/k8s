@@ -74,6 +74,11 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
     await ctx.reply(TypingActivityInput())
     response = json.loads(query(config.MCP_CLIENT_ADDRESS, ctx.activity.text))
     natural_response = response["natural"]
+    logging.info(f"DEBUG Info Below")
+    logging.info(f"conversation_ref {ctx.conversation_ref}")
+    logging.info(f"connection_name {ctx.connection_name}")
+    logging.info(f"user_token {ctx.user_token}")
+    logging.info(f"")
     logging.info(f"Handling from {ctx.connection_name} request {response} with answer {natural_response}")
     await ctx.send(f"{natural_response}")
     if type(response["raw"]) == list and len(response["raw"]) > 3:
