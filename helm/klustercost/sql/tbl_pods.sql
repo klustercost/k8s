@@ -79,6 +79,58 @@ AS $BODY$
 	END;
 $BODY$;
 
+CREATE OR REPLACE VIEW klustercost.tbl_nodes_verbose
+ AS
+ SELECT idx,
+    node,
+    mem,
+    cpu,
+    labels,
+    "node.kubernetes.io/instance-type",
+    "topology.kubernetes.io/region",
+    "topology.kubernetes.io/zone",
+    "kubernetes.io/os",
+    price_per_hour,
+    price_per_hour / mem AS mb_price_per_hour,
+    price_per_hour / cpu AS cpu_price_per_hour
+   FROM tbl_nodes;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS klustercost.tbl_pod_data_verbose_mv
+TABLESPACE pg_default
+AS
+ SELECT idx,
+    idx_pod,
+    "timestamp",
+    cpu,
+    mem,
+    cpu_request,
+    cpu_limit,
+    mem_request,
+    mem_limit,
+    cpu_price,
+    mem_price,
+        CASE
+            WHEN cpu_price > mem_price THEN cpu_price
+            ELSE mem_price
+        END AS price,
+    "timestamp"::date AS date,
+    to_char("timestamp", 'HH24'::text)::integer AS hour
+   FROM ( SELECT tbl_pod_data.idx,
+            tbl_pod_data.idx_pod,
+            tbl_pod_data."timestamp",
+            tbl_pod_data.cpu,
+            tbl_pod_data.mem,
+            tbl_pod_data.cpu_request,
+            tbl_pod_data.cpu_limit,
+            tbl_pod_data.mem_request,
+            tbl_pod_data.mem_limit,
+            tbl_pod_data.cpu * tbl_nodes_verbose.cpu_price_per_hour AS cpu_price,
+            tbl_pod_data.mem * tbl_nodes_verbose.mb_price_per_hour AS mem_price
+           FROM tbl_pod_data
+             LEFT JOIN tbl_pods ON tbl_pod_data.idx_pod = tbl_pods.idx
+             LEFT JOIN tbl_nodes_verbose ON tbl_pods.node::text = tbl_nodes_verbose.node::text) _
+WITH DATA;
+
 CREATE OR REPLACE VIEW klustercost.tbl_pod_data_verbose
  AS
  SELECT idx,
@@ -90,6 +142,66 @@ CREATE OR REPLACE VIEW klustercost.tbl_pod_data_verbose
     cpu_limit,
     mem_request,
     mem_limit,
-    to_char("timestamp", 'DD/MM/YYYY'::text) AS date,
-    to_char("timestamp", 'HH24'::text) AS hour
-   FROM tbl_pod_data;
+    cpu_price,
+    mem_price,
+    price,
+    date,
+    hour
+   FROM tbl_pod_data_verbose_mv;
+
+CREATE INDEX IF NOT EXISTS tbl_pods_idx
+    ON klustercost.tbl_pods USING btree
+    (idx ASC NULLS LAST)
+    WITH (fillfactor=100, deduplicate_items=True)
+    TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS tbl_pods_namespace
+    ON klustercost.tbl_pods USING hash
+    (namespace COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS tbl_pods_app_name
+    ON klustercost.tbl_pods USING hash
+    ("app.name" COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS tbl_pods_app_component
+    ON klustercost.tbl_pods USING hash
+    ("app.component" COLLATE pg_catalog."default")
+    TABLESPACE pg_default;        
+
+CREATE INDEX IF NOT EXISTS tbl_pd_data_idx_pod
+    ON klustercost.tbl_pod_data USING btree
+    (idx_pod ASC NULLS LAST)
+    WITH (fillfactor=100, deduplicate_items=True)
+    TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS tbl_pod_data_timestamp
+    ON klustercost.tbl_pod_data USING btree
+    ("timestamp" ASC NULLS LAST)
+    WITH (fillfactor=100, deduplicate_items=True)
+    TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS idx_pod_data_verbose_date
+    ON klustercost.tbl_pod_data_verbose_mv USING btree
+    (date ASC NULLS LAST)
+    WITH (fillfactor=100, deduplicate_items=True)
+    TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS idx_pod_data_verbose_hour
+    ON klustercost.tbl_pod_data_verbose_mv USING btree
+    (hour ASC NULLS LAST)
+    WITH (fillfactor=100, deduplicate_items=True)
+    TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS idx_pod_data_verbose_idx
+    ON klustercost.tbl_pod_data_verbose_mv USING btree
+    (idx ASC NULLS LAST)
+    WITH (fillfactor=100, deduplicate_items=True)
+    TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS idx_pod_data_verbose_idx_pod
+    ON klustercost.tbl_pod_data_verbose_mv USING btree
+    (idx_pod ASC NULLS LAST)
+    WITH (fillfactor=100, deduplicate_items=True)
+    TABLESPACE pg_default;        
