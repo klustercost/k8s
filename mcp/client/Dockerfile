@@ -8,10 +8,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY my_client.py ./
+COPY *.py ./
 
 USER appuser
 
-EXPOSE 8080
 
 CMD ["python", "my_client.py"]
