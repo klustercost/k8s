@@ -34,6 +34,8 @@ spec:
               value: "0.0.0.0"
             - name: MCP_CLIENT_PORT
               value: {{ .Values.mcp.client.port | quote }}
+            - name: MCP_SESSION_TIMEOUT
+              value: {{ .Values.mcp.client.sessionTimeout | quote }}              
           resources:
             requests:
               cpu: {{ .Values.mcp.client.resources.requests.cpu }}
