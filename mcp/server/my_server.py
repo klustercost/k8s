@@ -7,7 +7,7 @@ from functools import lru_cache
 import psycopg2
 from dotenv import load_dotenv
 from openai import OpenAI
-from fastmcp import FastMCP
+from fastmcp import FastMCP, Context
 from dotenv import load_dotenv
 from answer_formatter import format_answer
 
@@ -88,30 +88,30 @@ def get_schema_info() -> str:
             conn.close()
 
 
-def generate_sql(question: str, schema: str) -> str:
+def generate_sql(question: str, schema: str, response_id: str = None) -> str:
     """Ask OpenAI to produce a read-only SQL query for the given question."""
     log.info("Generating SQL via OpenAI (model=%s) …", OPENAI_MODEL)
     t0 = time.perf_counter()
-    response = openai_client.chat.completions.create(
+
+    response = openai_client.responses.create(
         model=OPENAI_MODEL,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT_TEMPLATE.format(schema=schema)},
-            {"role": "user", "content": question},
-        ],
-        temperature=0,
+        previous_response_id=response_id,
+        instructions=SYSTEM_PROMPT_TEMPLATE.format(schema=schema),
+        input=question
     )
+
     elapsed = time.perf_counter() - t0
-    content = response.choices[0].message.content
+    content = response.output_text
     if content is None:
         raise ValueError("OpenAI returned an empty response — no SQL was generated")
     sql = content.strip()
-    log.info("SQL generated in %.2fs:\n%s", elapsed, sql)
-    return sql
+    log.info(f"SQL generated in {elapsed:.2f}:\n{sql}")
+    return sql,  response.id
 
 
 def run_query(sql: str) -> list[dict]:
     """Execute a SELECT query and return rows as list of dicts."""
-    log.info("Sending query to PostgreSQL (%s:%s/%s) …", PG_HOST, PG_PORT, PG_DATABASE)
+    log.info(f"Sending query to PostgreSQL ({PG_HOST}:{PG_PORT}/{PG_DATABASE}) …")
     conn = None
     try:
         t0 = time.perf_counter()
@@ -123,10 +123,10 @@ def run_query(sql: str) -> list[dict]:
             columns = [desc[0] for desc in cur.description]
             rows = [dict(zip(columns, row)) for row in cur.fetchall()]
         elapsed = time.perf_counter() - t0
-        log.info("PostgreSQL responded in %.2fs — %d row(s) returned", elapsed, len(rows))
-        log.debug("Result columns: %s", columns)
+        log.info(f"PostgreSQL responded in {elapsed:.2f}s — {len(rows)} row(s) returned")
+        log.debug(f"Result columns: {columns}")
         if rows:
-            log.debug("First row: %s", rows[0])
+            log.debug(f"First row: {rows[0]}")
         return rows
     finally:
         if conn is not None:
@@ -136,7 +136,7 @@ def run_query(sql: str) -> list[dict]:
 # --- MCP Tools ---
 
 @mcp.tool
-def ask_db(question: str) -> str:
+async def ask_db(question: str, response_id: str | None, ctx: Context) -> str:
     """Ask a natural-language question about the PostgreSQL database.
 
     The question is converted to SQL via OpenAI, executed, and the results
@@ -145,11 +145,12 @@ def ask_db(question: str) -> str:
       - "natural": a human-readable, conversational answer (or null on failure)
     """
     log.info("──── New question received ────")
-    log.info("User question: %s", question)
+    log.info("User question: {question}")
+    log.info(f"Previous response ID: {response_id}")
     sql = None
     try:
         schema = get_schema_info()
-        sql = generate_sql(question, schema)
+        sql, response_id = generate_sql(question, schema, response_id)
         if sql.strip() == "REFUSE":
             log.warning("Question refused by LLM (off-topic)")
             return json.dumps({
@@ -171,10 +172,11 @@ def ask_db(question: str) -> str:
     except Exception as e:
         log.error("Answer formatting failed: %s", e)
 
-    result = json.dumps({"raw": rows, "natural": natural}, indent=2, default=str)
-    log.info("Returning %d row(s) to client", len(rows))
-    log.debug("Full result payload:\n%s", result)
+    result = json.dumps({"response_id": response_id, "raw": rows, "natural": natural}, indent=2, default=str)
+    log.info(f"Returning {len(rows)} row(s) to client")
+    log.debug(f"Full result payload:\n{result}")
     log.info("──── Question complete ────")
+
     return result
 
 

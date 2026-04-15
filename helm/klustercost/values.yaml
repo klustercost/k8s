@@ -65,6 +65,7 @@ mcp:
     image: ghcr.io/klustercost/k8s/klustercost-mcp-client:latest
     port: 8080
     serviceType: ClusterIP
+    sessionTimeout: 3600
     resources:
       requests:
         cpu: 50m
