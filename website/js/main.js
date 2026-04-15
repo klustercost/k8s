@@ -63,7 +63,7 @@
    ═══════════════════════════════════════════════════════════ */
 
 (function initSmoothScroll() {
-  const NAVBAR_HEIGHT = 64;
+  const NAVBAR_HEIGHT = 96;
 
   document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
     anchor.addEventListener('click', (e) => {
@@ -257,4 +257,34 @@ function copyCode(button) {
   );
 
   sections.forEach((section) => observer.observe(section));
+})();
+
+/* ═══════════════════════════════════════════════════════════
+   HANNOVER MESSE POPUP
+   ═══════════════════════════════════════════════════════════ */
+
+(function initMessePopup() {
+  const STORAGE_KEY = 'messe-popup-dismissed';
+  const popup = document.getElementById('messe-popup');
+  if (!popup) return;
+
+  if (localStorage.getItem(STORAGE_KEY)) return;
+
+  setTimeout(() => {
+    popup.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }, 1500);
+
+  function close() {
+    popup.classList.remove('active');
+    document.body.style.overflow = '';
+    localStorage.setItem(STORAGE_KEY, Date.now());
+  }
+
+  document.getElementById('messe-close').addEventListener('click', close);
+  document.getElementById('messe-backdrop').addEventListener('click', close);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && popup.classList.contains('active')) close();
+  });
 })();
