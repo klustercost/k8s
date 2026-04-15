@@ -42,11 +42,12 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
         ctx.conversation_ref.user.id if ctx.conversation_ref.user.id else ctx.conversation_ref.user.aad_object_id,  
         ctx.activity.text
     )
-    natural_response = json.loads(response)["natural"]
+    json_response = json.loads(response)
+    natural_response = json_response["natural"]
     logging.info(f"Handling from {ctx.connection_name} request {response} with answer {natural_response}")
     await ctx.send(f"{natural_response}")
     #TODO: This is a bit of a hack to determine if we should send a card or not, we should have a more robust way to determine this in the future
-    if type(response["raw"]) == list and len(response["raw"]) > 3:
+    if type(json_response["raw"]) == list and len(json_response["raw"]) > 3:
         await ctx.send(make_donut_card(response["raw"]))
 
 if __name__ == "__main__":
