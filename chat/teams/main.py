@@ -8,6 +8,7 @@ from microsoft_teams.api import MessageActivity, TypingActivityInput
 from microsoft_teams.apps import ActivityContext, App
 from config import Config
 from query_data import query
+from adaptive_cards import make_donut_card
 
 logging.basicConfig(level=logging.INFO)
 
@@ -44,6 +45,9 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
     natural_response = json.loads(response)["natural"]
     logging.info(f"Handling from {ctx.connection_name} request {response} with answer {natural_response}")
     await ctx.send(f"{natural_response}")
+    #TODO: This is a bit of a hack to determine if we should send a card or not, we should have a more robust way to determine this in the future
+    if type(response["raw"]) == list and len(response["raw"]) > 3:
+        await ctx.send(make_donut_card(response["raw"]))
 
 if __name__ == "__main__":
     asyncio.run(app.start())
