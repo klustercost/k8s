@@ -36,7 +36,11 @@ async def handle_greeting(ctx: ActivityContext[MessageActivity]) -> None:
 @app.on_message
 async def handle_message(ctx: ActivityContext[MessageActivity]):
     await ctx.reply(TypingActivityInput())
-    response = query(config.MCP_CLIENT_ADDRESS, ctx.activity.text)
+    response = query(
+        config.MCP_CLIENT_ADDRESS, 
+        ctx.conversation_ref.user.id if ctx.conversation_ref.user.id else ctx.conversation_ref.user.aad_object_id,  
+        ctx.activity.text
+    )
     natural_response = json.loads(response)["natural"]
     logging.info(f"Handling from {ctx.connection_name} request {response} with answer {natural_response}")
     await ctx.send(f"{natural_response}")
