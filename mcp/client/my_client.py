@@ -1,13 +1,13 @@
 import os
 import logging
-from json import JSONDecodeError
+from json import loads, JSONDecodeError
 
 import uvicorn
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import JSONResponse
 from fastmcp import Client
 from dotenv import load_dotenv
-import asyncio
+
+from active_users import get_last_request, set_last_request
 
 load_dotenv(override=False)
 
@@ -34,33 +34,26 @@ app = FastAPI(title="MCP Client", docs_url=None, redoc_url=None)
 
 MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "120"))
 
-sessions: dict[str, Client] = {}
-sessions_lock = asyncio.Lock()
-async def get_session(user_id: str) -> Client:
-    async with sessions_lock:
-        if user_id not in sessions:
-            client = Client(MCP_SERVER_URL)
-            await client.__aenter__()
-            sessions[user_id] = client
-            log.info("Created MCP session for user %s", user_id)
-        return sessions[user_id]
-
 async def ask(question: str, user_id: str) -> dict:
     """Forward a question to the MCP server using a per-user session."""
-    mcp = await get_session(user_id)
-    result = await mcp.call_tool(
-        "ask_db",
-        {"question": question, "user_id": user_id},
-        raise_on_error=False,
-        timeout=MCP_TIMEOUT,
-    )
-    if result.is_error:
-        text = result.data or result.content[0].text
-        log.error(text)
-        return {"error": str(text)}
-    payload = result.data if result.data is not None else result.structured_content
-    log.info(payload)
-    return {"answer": payload}
+    async with Client(MCP_SERVER_URL) as mcp:
+        result = await mcp.call_tool(
+            "ask_db",
+            {"question": question, "response_id": get_last_request(user_id)},
+            raise_on_error=False,
+            timeout=MCP_TIMEOUT,
+        )
+        if result.is_error:
+            text = result.data or result.content[0].text
+            log.error(text)
+            return {"error": str(text)}
+        payload = result.data if result.data is not None else result.structured_content
+        try:
+            set_last_request(user_id, loads(payload)["response_id"])
+        except Exception as e:
+            log.error(f"Failed to parse response_id from MCP response: {e}")
+        log.info(payload)
+        return {"answer": payload}
 
 
 async def query_from_body(request: Request):
