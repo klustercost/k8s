@@ -42,7 +42,6 @@ SQL rules:
 - Only double-quote individual identifiers that contain dots or hyphens (e.g. "app.name", "app.part-of"). Never double-quote schema-qualified table references as a single string.
 - No INSERT/UPDATE/DELETE.
 - Return ONLY the raw SQL — no markdown, no explanation, no code fences.
-- When asked details about pods, first try to get the details you need from the "tbl_pod_data_verbose" table.
 
 Example:
 User: Which pod consumed the most CPU in the last 30 minutes?
