@@ -5,13 +5,12 @@ import os
 import json
 
 TEMPLATE = os.environ.get("TEMPLATE")
-
-crt_context="_9dG8Nkit9?ctid=00a13d3a-b034-4fc8-b3b0-b1b37777fd93&pbi_source=linkShare&bookmarkGuid=c21ef7da-f8a2-4a4f-9869-d748638fae86"
+TEMPLATE_CONTEXT = os.environ.get("TEMPLATE_CONTEXT")
 
 def handle_message(message, phone_number_id):
     sender_id = message["from"]    
-    response = query(message["text"]["body"])
+    response = query(phone_number_id,message["text"]["body"])
     natural_response = json.loads(response)["natural"]
     logger.log.info(f"Handling from ${sender_id} request ${response} with answer ${natural_response}")
     send_message(sender_id,natural_response,phone_number_id)
-    send_templated_message(sender_id, TEMPLATE, phone_number_id, "this request", crt_context)
+    send_templated_message(sender_id, TEMPLATE, phone_number_id, "this request", TEMPLATE_CONTEXT)

@@ -99,6 +99,7 @@ wafrontend:
   accesstoken:
   verifytoken:
   template: standard_simple_reply
+  templateContext: ""
 
 powerbi:
   enabled: true
