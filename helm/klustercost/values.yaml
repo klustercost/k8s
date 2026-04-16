@@ -98,7 +98,7 @@ wafrontend:
       memory: 256Mi
   accesstoken:
   verifytoken:
-  template: standard_simple_reply
+  template: "more_data"
   templateContext: ""
 
 powerbi:
