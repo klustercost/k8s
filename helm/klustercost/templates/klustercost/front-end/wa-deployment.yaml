@@ -35,6 +35,8 @@ spec:
               value: http://{{ .Release.Name }}-mcp-client.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.mcp.client.port }}
             - name: TEMPLATE
               value: "{{ .Values.wafrontend.template }}"
+            - name: TEMPLATE_CONTEXT
+              value: "{{ .Values.wafrontend.templateContext }}"              
           resources:
             requests:
               cpu: {{ .Values.wafrontend.resources.requests.cpu }}
