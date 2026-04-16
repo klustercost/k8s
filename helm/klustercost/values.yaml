@@ -20,10 +20,10 @@ postgresql:
   username: klustercost
   password: klustercost
   tls:
-    enabled: true
+    enabled: false
   port: 5432
   pvc:
-    enabled: true
+    enabled: false
     size: 8Gi
     storageClass: "managed-csi"
   serviceType: ClusterIP

@@ -1,0 +1,55 @@
+
+============================================================
+  KlusterCost has been deployed successfully!
+  Release: {{ .Release.Name }}
+  Namespace: {{ .Release.Namespace }}
+============================================================
+
+{{- if not .Values.postgresql.pvc.enabled }}
+
+  ⚠️  TRANSPARENT MODE — NO PERSISTENT STORAGE
+
+  You installed PostgreSQL without a PersistentVolumeClaim
+  (postgresql.pvc.enabled = false).
+
+  This means PostgreSQL is using an emptyDir volume and ALL
+  DATA WILL BE LOST when the PostgreSQL pod restarts, is
+  rescheduled, or is upgraded.
+
+  To enable persistent storage, upgrade the release with:
+
+    helm upgrade {{ .Release.Name }} <chart> \
+      --set postgresql.pvc.enabled=true \
+      --set postgresql.pvc.storageClass=<your-storage-class> \
+      --set postgresql.pvc.size=8Gi
+
+{{- else }}
+
+  ✅  PostgreSQL is using persistent storage.
+      StorageClass: {{ .Values.postgresql.pvc.storageClass }}
+      Size:         {{ .Values.postgresql.pvc.size }}
+
+{{- end }}
+
+{{- if .Values.mcp.enabled }}
+
+  MCP server is enabled.
+  {{- if eq .Values.mcp.openai.apiKey "" }}
+  ⚠️  No OpenAI API key is set (mcp.openai.apiKey is empty).
+     The MCP AI features will not work until a key is provided.
+  {{- end }}
+{{- end }}
+
+{{- if .Values.wafrontend.enabled }}
+
+  Web frontend is running on port {{ .Values.wafrontend.port }}.
+  Service type: {{ .Values.wafrontend.serviceType }}
+{{- end }}
+
+{{- if .Values.teams.enabled }}
+
+  Teams bot is enabled.
+  {{- if eq .Values.teams.tenantId "" }}
+  ⚠️  teams.tenantId is not set — the Teams bot will not function.
+  {{- end }}
+{{- end }}
