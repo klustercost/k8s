@@ -29,12 +29,12 @@ app = App(
     token=create_token_factory() if config.BOT_TYPE == "UserAssignedMsi" else None
 )
 
-def response_from_ctx(ctx, imperaive_query:str):
+def response_from_ctx(ctx, imperative_query:str=None):
     logging.info(f"Handling from {ctx.connection_name}")
     json_response = query(
         config.MCP_CLIENT_ADDRESS, 
         ctx.conversation_ref.user.id if ctx.conversation_ref.user.id else ctx.conversation_ref.user.aad_object_id,  
-        imperaive_query if imperaive_query else ctx.activity.text
+        imperative_query if imperative_query else ctx.activity.text
     )
     logging.info(f"Natural response: {json_response['natural']}")
     logging.debug(f"Full answer from MCP: {json.dumps(json_response)}")    
