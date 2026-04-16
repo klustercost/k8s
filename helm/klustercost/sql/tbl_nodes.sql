@@ -37,3 +37,19 @@ begin
   END IF;
 end;
 $$;
+
+CREATE OR REPLACE VIEW klustercost.tbl_nodes_verbose
+ AS
+ SELECT idx,
+    node,
+    mem,
+    cpu,
+    labels,
+    "node.kubernetes.io/instance-type",
+    "topology.kubernetes.io/region",
+    "topology.kubernetes.io/zone",
+    "kubernetes.io/os",
+    price_per_hour,
+    price_per_hour / mem AS mb_price_per_hour,
+    price_per_hour / cpu AS cpu_price_per_hour
+   FROM tbl_nodes;
