@@ -12,6 +12,11 @@ from adaptive_cards import make_donut_card
 
 logging.basicConfig(level=logging.INFO)
 
+#TODO: move this in a config map
+prompt_overrides = {
+    "What is the biggest increase in cost?": "Top 3 namespaces with increased memory yesterday compared to previous day"
+}
+
 config = Config('TENANT_ID', 'CLIENT_ID', 'BOT_TYPE', 'MCP_CLIENT_ADDRESS')
 
 def create_token_factory():
@@ -40,10 +45,10 @@ def response_from_ctx(ctx, imperative_query:str=None):
     logging.debug(f"Full answer from MCP: {json.dumps(json_response)}")    
     return json_response
 
-@app.on_message_pattern(re.compile(r"What is the biggest increase in cost?"))
-async def handle_greeting(ctx: ActivityContext[MessageActivity]) -> None:
+@app.on_message_pattern("|".join([x[0] for x in prompt_overrides.items()]))
+async def handle_prompt(ctx: ActivityContext[MessageActivity]) -> None:
     await ctx.reply(TypingActivityInput())
-    response = response_from_ctx(ctx,"Top 3 namespaces with increased memory yesterday compared to previous day")
+    response = response_from_ctx(ctx,prompt_overrides[ctx.activity.text])
     await ctx.send(f"{response['natural']}")   
     await ctx.send(make_donut_card(response["raw"]))
 
@@ -53,7 +58,7 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
     response = response_from_ctx(ctx)
     await ctx.send(f"{response['natural']}")
     #TODO: This is a bit of a hack to determine if we should send a card or not, we should have a more robust way to determine this in the future
-    if type(response["raw"]) == list and len(response["raw"]) > 3:
+    if type(response["raw"]) == list and len(response["raw"]) >= 3:
         await ctx.send(make_donut_card(response["raw"]))
 
 if __name__ == "__main__":
