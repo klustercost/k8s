@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 config = Config('TENANT_ID', 'CLIENT_ID', 'BOT_TYPE', 'MCP_CLIENT_ADDRESS')
 
 def create_token_factory():
-    def get_token(scopes):
+    def get_token(scopes, tenant_id=None):
         credential = WorkloadIdentityCredential(client_id=config.CLIENT_ID)
         if isinstance(scopes, str):
             scopes_list = [scopes]
