@@ -154,8 +154,8 @@ async def ask_db(question: str, response_id: str | None, ctx: Context) -> str:
         if sql.strip() == "REFUSE":
             log.warning("Question refused by LLM (off-topic)")
             return json.dumps({
-                "raw": "Sorry, I can only answer questions about the Kubernetes cluster database.",
-                "natural": "Sorry, I can only answer questions about the Kubernetes cluster database.",
+                "raw": "Sorry, I can only answer questions about the Kubernetes cluster database. Please try again with a question about the cluster. For example: Which pods are using the most CPU today?",
+                "natural": "Sorry, I can only answer questions about the Kubernetes cluster database. Please try again with a question about the cluster. For example: Which pods are using the most CPU today?",
             }, indent=2)
         rows = run_query(sql)
     except Exception as e:
