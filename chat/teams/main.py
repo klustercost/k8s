@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 config = Config('TENANT_ID', 'CLIENT_ID', 'BOT_TYPE', 'MCP_CLIENT_ADDRESS')
 
 def create_token_factory():
-    def get_token(scopes, tenant_id=None):
+    def get_token(scopes):
         credential = WorkloadIdentityCredential(client_id=config.CLIENT_ID)
         if isinstance(scopes, str):
             scopes_list = [scopes]
@@ -29,26 +29,32 @@ app = App(
     token=create_token_factory() if config.BOT_TYPE == "UserAssignedMsi" else None
 )
 
-@app.on_message_pattern(re.compile(r"hello|hi|greetings"))
-async def handle_greeting(ctx: ActivityContext[MessageActivity]) -> None:
-    await ctx.send("Hello! How can I assist you today?")
+def response_from_ctx(ctx, imperaive_query:str):
+    logging.info(f"Handling from {ctx.connection_name}")
+    json_response = query(
+        config.MCP_CLIENT_ADDRESS, 
+        ctx.conversation_ref.user.id if ctx.conversation_ref.user.id else ctx.conversation_ref.user.aad_object_id,  
+        imperaive_query if imperaive_query else ctx.activity.text
+    )
+    logging.info(f"Natural response: {json_response['natural']}")
+    logging.debug(f"Full answer from MCP: {json.dumps(json_response)}")    
+    return json_response
 
+@app.on_message_pattern(re.compile(r"What is the biggest increase in cost?"))
+async def handle_greeting(ctx: ActivityContext[MessageActivity]) -> None:
+    await ctx.reply(TypingActivityInput())
+    response = response_from_ctx(ctx,"Top 3 namespaces with increased memory yesterday compared to previous day")
+    await ctx.send(f"{response['natural']}")   
+    await ctx.send(make_donut_card(response["raw"]))
 
 @app.on_message
 async def handle_message(ctx: ActivityContext[MessageActivity]):
     await ctx.reply(TypingActivityInput())
-    response = query(
-        config.MCP_CLIENT_ADDRESS, 
-        ctx.conversation_ref.user.id if ctx.conversation_ref.user.id else ctx.conversation_ref.user.aad_object_id,  
-        ctx.activity.text
-    )
-    json_response = json.loads(response)
-    natural_response = json_response["natural"]
-    logging.info(f"Handling from {ctx.connection_name} request {response} with answer {natural_response}")
-    await ctx.send(f"{natural_response}")
+    response = response_from_ctx(ctx)
+    await ctx.send(f"{response['natural']}")
     #TODO: This is a bit of a hack to determine if we should send a card or not, we should have a more robust way to determine this in the future
-    if type(json_response["raw"]) == list and len(json_response["raw"]) > 3:
-        await ctx.send(make_donut_card(json_response["raw"]))
+    if type(response["raw"]) == list and len(response["raw"]) > 3:
+        await ctx.send(make_donut_card(response["raw"]))
 
 if __name__ == "__main__":
     asyncio.run(app.start())
