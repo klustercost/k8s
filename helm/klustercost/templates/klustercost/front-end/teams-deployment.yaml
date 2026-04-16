@@ -19,15 +19,15 @@ spec:
       containers:
       - env:
         - name: PORT
-          value: {{ .Values.teams.targetPort }}
+          value: "{{ .Values.teams.targetPort }}"
         - name: MCP_CLIENT_ADDRESS
           value:  http://{{ .Release.Name }}-mcp-client.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.mcp.client.port }}
         - name: BOT_TYPE
           value: {{ .Values.teams.botType }}
         - name: CLIENT_ID
-          value: {{ .Values.teams.clientId }}
+          value: {{ .Values.teams.clientId | quote }}
         - name: TENANT_ID
-          value: {{ .Values.teams.tenantId }}
+          value: {{ .Values.teams.tenantId | quote }}
         image: {{ .Values.teams.image }}
         imagePullPolicy: Always
         name: kc-teamsb
