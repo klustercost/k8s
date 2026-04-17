@@ -145,7 +145,7 @@ async def ask_db(question: str, response_id: str | None, ctx: Context) -> str:
       - "natural": a human-readable, conversational answer (or null on failure)
     """
     log.info("──── New question received ────")
-    log.info("User question: {question}")
+    log.info(f"User question: {question}")
     log.info(f"Previous response ID: {response_id}")
     sql = None
     try:
@@ -156,6 +156,7 @@ async def ask_db(question: str, response_id: str | None, ctx: Context) -> str:
             return json.dumps({
                 "raw": "Sorry, I can only answer questions about the Kubernetes cluster database. Please try again with a question about the cluster. For example: Which pods are using the most CPU today?",
                 "natural": "Sorry, I can only answer questions about the Kubernetes cluster database. Please try again with a question about the cluster. For example: Which pods are using the most CPU today?",
+                "status": "refused"
             }, indent=2)
         rows = run_query(sql)
     except Exception as e:
@@ -164,6 +165,7 @@ async def ask_db(question: str, response_id: str | None, ctx: Context) -> str:
         return json.dumps({
             "raw": f"Error: {e}{sql_info}",
             "natural": f"Error: {e}{sql_info}",
+            "status": "error"
         }, indent=2)
 
     natural = None
@@ -172,7 +174,7 @@ async def ask_db(question: str, response_id: str | None, ctx: Context) -> str:
     except Exception as e:
         log.error("Answer formatting failed: %s", e)
 
-    result = json.dumps({"response_id": response_id, "raw": rows, "natural": natural}, indent=2, default=str)
+    result = json.dumps({"response_id": response_id, "raw": rows, "natural": natural,"status": "success"}, indent=2, default=str)
     log.info(f"Returning {len(rows)} row(s) to client")
     log.debug(f"Full result payload:\n{result}")
     log.info("──── Question complete ────")
