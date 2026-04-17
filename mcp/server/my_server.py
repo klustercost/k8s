@@ -145,7 +145,7 @@ async def ask_db(question: str, response_id: str | None, ctx: Context) -> str:
       - "natural": a human-readable, conversational answer (or null on failure)
     """
     log.info("──── New question received ────")
-    log.info("User question: {question}")
+    log.info(f"User question: {question}")
     log.info(f"Previous response ID: {response_id}")
     sql = None
     try:
