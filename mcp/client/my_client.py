@@ -31,7 +31,6 @@ MCP_CLIENT_PORT = int(os.getenv("MCP_CLIENT_PORT", "8080"))
 
 app = FastAPI(title="MCP Client", docs_url=None, redoc_url=None)
 
-
 MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "120"))
 
 async def ask(question: str, user_id: str) -> dict:
@@ -46,7 +45,7 @@ async def ask(question: str, user_id: str) -> dict:
         if result.is_error:
             text = result.data or result.content[0].text
             log.error(text)
-            return {"error": str(text)}
+            return {"status":"error","error_info": str(text)}
         payload = result.data if result.data is not None else result.structured_content
         try:
             set_last_request(user_id, loads(payload)["response_id"])
