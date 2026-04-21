@@ -64,28 +64,27 @@ AS $BODY$
 	BEGIN
 		SELECT idx INTO pod_id FROM klustercost.tbl_pods WHERE "arg.name" = tbl_pods.name;
 		IF pod_id IS NULL THEN
-            BEGIN TRANSACTION;
-                INSERT INTO klustercost.tbl_pods   (name, namespace, node)
-                VALUES ("arg.name", "arg.namespace", "arg.node");
-                SELECT idx INTO pod_id FROM klustercost.tbl_pods WHERE "arg.name" = klustercost.tbl_pods.name;
-                IF "arg.app.name" IS NOT NULL THEN
-                    UPDATE klustercost.tbl_pods SET "app.name" = "arg.app.name" WHERE idx = pod_id;
-                END IF;
-                IF "arg.app.instance" IS NOT NULL THEN
-                    UPDATE klustercost.tbl_pods SET "app.instance" = "arg.app.instance" WHERE idx = pod_id;
-                END IF;
-                IF "arg.app.version" IS NOT NULL THEN
-                    UPDATE klustercost.tbl_pods SET "app.version" = "arg.app.version" WHERE idx = pod_id;
-                END IF;
-                IF "arg.app.component" IS NOT NULL THEN
-                    UPDATE klustercost.tbl_pods SET "app.component" = "arg.app.component" WHERE idx = pod_id;
-                END IF;
-                IF "arg.app.part-of" IS NOT NULL THEN
-                    UPDATE klustercost.tbl_pods SET "app.part-of" = "arg.app.part-of" WHERE idx = pod_id;
-                END IF;
-                IF "arg.app.managed-by" IS NOT NULL THEN
-                    UPDATE klustercost.tbl_pods SET "app.managed-by" = "arg.app.managed-by" WHERE idx = pod_id;
-                END IF;
+            INSERT INTO klustercost.tbl_pods   (name, namespace, node)
+            VALUES ("arg.name", "arg.namespace", "arg.node");
+            SELECT idx INTO pod_id FROM klustercost.tbl_pods WHERE "arg.name" = klustercost.tbl_pods.name;
+            IF "arg.app.name" IS NOT NULL THEN
+                UPDATE klustercost.tbl_pods SET "app.name" = "arg.app.name" WHERE idx = pod_id;
+            END IF;
+            IF "arg.app.instance" IS NOT NULL THEN
+                UPDATE klustercost.tbl_pods SET "app.instance" = "arg.app.instance" WHERE idx = pod_id;
+            END IF;
+            IF "arg.app.version" IS NOT NULL THEN
+                UPDATE klustercost.tbl_pods SET "app.version" = "arg.app.version" WHERE idx = pod_id;
+            END IF;
+            IF "arg.app.component" IS NOT NULL THEN
+                UPDATE klustercost.tbl_pods SET "app.component" = "arg.app.component" WHERE idx = pod_id;
+            END IF;
+            IF "arg.app.part-of" IS NOT NULL THEN
+                UPDATE klustercost.tbl_pods SET "app.part-of" = "arg.app.part-of" WHERE idx = pod_id;
+            END IF;
+            IF "arg.app.managed-by" IS NOT NULL THEN
+                UPDATE klustercost.tbl_pods SET "app.managed-by" = "arg.app.managed-by" WHERE idx = pod_id;
+            END IF;
             COMMIT;
 		END IF;
 	
