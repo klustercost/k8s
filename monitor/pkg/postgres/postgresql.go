@@ -52,9 +52,7 @@ func (pg *persistence_pg) InsertPod(pod_name, namespace, node string, podUsage *
 		appLabels.Name, appLabels.Instance, appLabels.Version,
 		appLabels.Component, appLabels.PartOf, appLabels.ManagedBy)
 	if err != nil {
-		fmt.Println("Error inserting pod details into the database:", err)
-		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-		return err
+		return fmt.Errorf("error inserting pod details: %w", err)
 	}
 	fmt.Println("INSERTED POD:", pod_name, namespace, "memory usage", podUsage.Memory, "CPU usage", podUsage.CPU, "node", node)
 	return nil
@@ -67,9 +65,7 @@ func (pg *persistence_pg) InsertNode(node_name string, nodeMisc *model.NodeMisc)
 		node_name, nodeMisc.Memory, nodeMisc.CPU,
 		nodeMisc.Labels, nodeMisc.InstanceType, nodeMisc.Region, nodeMisc.Zone, nodeMisc.OS)
 	if err != nil {
-		fmt.Println("Error inserting node details into the database:", err)
-		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-		return err
+		return fmt.Errorf("error inserting node details: %w", err)
 	}
 	fmt.Println("INSERTED Node:", node_name, "memory", nodeMisc.Memory, "CPU", nodeMisc.CPU, "labels", nodeMisc.Labels)
 	return nil
@@ -82,9 +78,7 @@ func (pg *persistence_pg) InsertOwner(name string, namespace string, allRef *mod
 	_, err := pg.db_connection.Exec("INSERT INTO klustercost.tbl_owners(name, namespace,  own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels) VALUES($1, $2, $3, $4, NULLIF($5,''), NULLIF($6,''), NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), NULLIF($10,''))",
 		name, namespace, allRef.OwnVersion, allRef.OwnKind, allRef.OwnerUid, allRef.OwnerVersion, allRef.OwnKind, allRef.OwnerName, allRef.OwnerUid, allRef.Labels)
 	if err != nil {
-		fmt.Println("Error inserting owner details into the database:", err)
-		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-		return err
+		return fmt.Errorf("error inserting owner details: %w", err)
 	}
 	fmt.Println("INSERTED Owner:", name, namespace, "owner kind", allRef.OwnKind)
 	return nil
@@ -97,9 +91,7 @@ func (pg *persistence_pg) InsertService(name string, namespace string, svcRef *m
 	_, err := pg.db_connection.Exec("INSERT INTO klustercost.tbl_services(service_name, namespace, own_uid, app_label, labels, selector) VALUES($1, $2, $3, NULLIF($4,''), NULLIF($5,''), NULLIF($6,''))",
 		name, namespace, svcRef.UID, svcRef.AppLabel, svcRef.Labels, svcRef.Selector)
 	if err != nil {
-		fmt.Println("Error inserting service details into the database:", err)
-		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-		return err
+		return fmt.Errorf("error inserting service details: %w", err)
 	}
 	fmt.Println("INSERTED Service:", name, namespace, "service selector", svcRef.Selector)
 	return nil

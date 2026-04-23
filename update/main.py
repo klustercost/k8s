@@ -16,20 +16,34 @@ class operate_db:
     __cache = {}
 
     def __init__(self) -> None:
+        self.price_uri = os.getenv('price_uri')
+        self._connect()
 
-        try:
-            self.price_uri = os.getenv('price_uri')
+    def _connect(self):
+        retry_delay = 2
+        attempt = 0
 
-            self.connection = psycopg2.connect(
-                host=os.getenv('host'),
-                database=os.getenv('database'),
-                user=os.getenv('user'),
-                password=os.getenv('password'),
-                port=os.getenv('port')
-            )
-        except KeyError as Ex:
-            raise Exception(f"missing an environment variable: {Ex.args[0]}")
-        
+        while True:
+            attempt += 1
+            try:
+                logging.info("Attempt %d to connect to the database", attempt)
+                self.connection = psycopg2.connect(
+                    host=os.getenv('host'),
+                    database=os.getenv('database'),
+                    user=os.getenv('user'),
+                    password=os.getenv('password'),
+                    port=os.getenv('port')
+                )
+                logging.info("Connected to PostgreSQL")
+                return
+            except psycopg2.OperationalError:
+                logging.warning(
+                    "PostgreSQL not ready, retrying in %ds (attempt %d)",
+                    retry_delay, attempt,
+                )
+                time.sleep(retry_delay)
+                retry_delay = min(retry_delay * 2, 300)
+
     def get_work_items(self) -> None:
         logging.debug(f'Checking for nodes with no price')
         try:
@@ -42,8 +56,9 @@ class operate_db:
                         self.set_work_item(row[0], price)
                     row = cursor.fetchone()
             self.connection.commit()
-        except psycopg2.DatabaseError as error:
-            logging.error(error)
+        except (psycopg2.DatabaseError, psycopg2.InterfaceError) as error:
+            logging.error("Database error: %s — reconnecting", error)
+            self._connect()
 
     def price_from_labels(self, labels) -> float:
         if not labels in self.__cache:       
