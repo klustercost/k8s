@@ -43,98 +43,12 @@
 
 <body class="bg-slate-950 text-slate-200 font-sans antialiased overflow-x-hidden">
 
-  <!-- ═══════════════════════════════════════════════════════════
-       HANNOVER MESSE 2026 POPUP
-       ═══════════════════════════════════════════════════════════ -->
-  <div id="messe-popup" class="fixed inset-0 z-[100] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-500">
-    <div id="messe-backdrop" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
-    <div id="messe-card" class="relative w-full max-w-md transform scale-95 transition-transform duration-500">
-      <div class="glass rounded-2xl sm:rounded-3xl border border-white/10 overflow-hidden shadow-2xl shadow-brand-500/10">
-
-        <div class="h-1.5 bg-gradient-to-r from-brand-400 via-blue-500 to-violet-500"></div>
-
-        <div class="p-6 sm:p-8">
-          <button id="messe-close" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all duration-200">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
-
-          <div class="inline-flex items-center gap-2 bg-brand-500/10 border border-brand-500/20 rounded-full px-3 py-1 mb-5">
-            <span class="w-2 h-2 rounded-full bg-brand-400 animate-pulse"></span>
-            <span class="text-[11px] font-semibold text-brand-300 uppercase tracking-wider">Live Event</span>
-          </div>
-
-          <h3 class="text-xl sm:text-2xl font-bold text-white mb-1">Meet us at</h3>
-          <h2 class="text-2xl sm:text-3xl font-black mb-5">
-            <span class="gradient-text">Hannover Messe 2026</span>
-          </h2>
-
-          <div class="space-y-3 mb-6">
-            <div class="flex items-start gap-3">
-              <div class="mt-0.5 w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center flex-shrink-0">
-                <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-              </div>
-              <div>
-                <p class="text-sm font-medium text-white">Hanover Exhibition and Trade Center</p>
-                <p class="text-xs text-slate-400">30521 Hanover, Germany</p>
-              </div>
-            </div>
-
-            <div class="flex items-start gap-3">
-              <div class="mt-0.5 w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0">
-                <svg class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
-              </div>
-              <div>
-                <p class="text-sm font-medium text-white">Hall 26 &mdash; Stand F92 &mdash; Booth 4</p>
-                <p class="text-xs text-slate-400">Come say hello and see a live demo</p>
-              </div>
-            </div>
-          </div>
-
-          <a href="https://www.hannovermesse.de" target="_blank" rel="noopener" class="group flex items-center justify-center gap-2 w-full bg-gradient-to-r from-brand-500 to-blue-500 text-white font-semibold rounded-xl px-6 py-3 transition-all duration-300 hover:shadow-lg hover:shadow-brand-500/25 hover:-translate-y-0.5 text-sm">
-            Learn More
-            <svg class="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- ═══════════════════════════════════════════════════════════
        SECTION 1 — NAVIGATION
        ═══════════════════════════════════════════════════════════ -->
-  <!-- ANNOUNCEMENT TICKER -->
-  <div id="ticker-bar" class="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-brand-600 via-blue-600 to-violet-600 overflow-hidden">
-    <div class="ticker-track flex whitespace-nowrap py-1.5 sm:py-2">
-      <span class="ticker-content inline-flex items-center gap-6 px-6 text-xs sm:text-sm font-medium text-white">
-        <span class="inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-white/80 animate-pulse"></span> Meet us at Hannover Messe 2026</span>
-        <span class="text-white/40">|</span>
-        <span>Hall 26 &mdash; Stand F92 &mdash; Booth 4</span>
-        <span class="text-white/40">|</span>
-        <span>Hanover Exhibition and Trade Center, 30521 Hanover</span>
-        <span class="text-white/40">|</span>
-        <span class="inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-white/80 animate-pulse"></span> Meet us at Hannover Messe 2026</span>
-        <span class="text-white/40">|</span>
-        <span>Hall 26 &mdash; Stand F92 &mdash; Booth 4</span>
-        <span class="text-white/40">|</span>
-        <span>Hanover Exhibition and Trade Center, 30521 Hanover</span>
-      </span>
-      <span class="ticker-content inline-flex items-center gap-6 px-6 text-xs sm:text-sm font-medium text-white" aria-hidden="true">
-        <span class="inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-white/80 animate-pulse"></span> Meet us at Hannover Messe 2026</span>
-        <span class="text-white/40">|</span>
-        <span>Hall 26 &mdash; Stand F92 &mdash; Booth 4</span>
-        <span class="text-white/40">|</span>
-        <span>Hanover Exhibition and Trade Center, 30521 Hanover</span>
-        <span class="text-white/40">|</span>
-        <span class="inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-white/80 animate-pulse"></span> Meet us at Hannover Messe 2026</span>
-        <span class="text-white/40">|</span>
-        <span>Hall 26 &mdash; Stand F92 &mdash; Booth 4</span>
-        <span class="text-white/40">|</span>
-        <span>Hanover Exhibition and Trade Center, 30521 Hanover</span>
-      </span>
-    </div>
-  </div>
 
-  <nav id="navbar" class="fixed top-[28px] sm:top-[32px] left-0 right-0 z-50 transition-all duration-300">
+  <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
     <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
       <a href="#" class="flex items-center gap-2 group">
         <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-400 to-blue-500 flex items-center justify-center text-white font-bold text-sm transition-transform duration-300 group-hover:scale-110">K</div>

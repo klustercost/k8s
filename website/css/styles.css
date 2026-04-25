@@ -25,24 +25,6 @@ section[id] {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   ANNOUNCEMENT TICKER
-   ═══════════════════════════════════════════════════════════ */
-
-.ticker-track {
-  animation: tickerScroll 30s linear infinite;
-  width: max-content;
-}
-
-@keyframes tickerScroll {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-
-.ticker-track:hover {
-  animation-play-state: paused;
-}
-
-/* ═══════════════════════════════════════════════════════════
    GRADIENT TEXT
    ═══════════════════════════════════════════════════════════ */
 
@@ -261,24 +243,5 @@ pre {
 
   html {
     scroll-behavior: auto;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════
-   HANNOVER MESSE POPUP
-   ═══════════════════════════════════════════════════════════ */
-
-#messe-popup.active {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-#messe-popup.active #messe-card {
-  transform: scale(1);
-}
-
-@media (max-width: 640px) {
-  #messe-popup {
-    align-items: center;
   }
 }
