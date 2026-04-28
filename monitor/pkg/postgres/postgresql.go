@@ -43,10 +43,10 @@ func (pg *persistence_pg) Close() {
 
 // This function inserts the details of a pod into the database
 // It calls the klustercost.register_pod_data stored procedure
-func (pg *persistence_pg) InsertPod(pod_name, namespace, node string, podUsage *model.PodConsumption, appLabels *model.PodAppLabels, podResources *model.PodResources) error {
+func (pg *persistence_pg) InsertPod(pod_uid, pod_name, namespace, node string, podUsage *model.PodConsumption, appLabels *model.PodAppLabels, podResources *model.PodResources) error {
 	_, err := pg.db_connection.Exec(
-		"CALL klustercost.register_pod_data($1, $2, $3, $4, $5, $6, $7, $8, $9, NULLIF($10,''), NULLIF($11,''), NULLIF($12,''), NULLIF($13,''), NULLIF($14,''), NULLIF($15,''))",
-		pod_name, namespace, node,
+		"CALL klustercost.register_pod_data($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULLIF($11,''), NULLIF($12,''), NULLIF($13,''), NULLIF($14,''), NULLIF($15,''), NULLIF($16,''))",
+		pod_uid, pod_name, namespace, node,
 		podUsage.CPU.Value, podUsage.Memory.Value,
 		podResources.CPURequest, podResources.CPULimit, podResources.MemRequest, podResources.MemLimit,
 		appLabels.Name, appLabels.Instance, appLabels.Version,
