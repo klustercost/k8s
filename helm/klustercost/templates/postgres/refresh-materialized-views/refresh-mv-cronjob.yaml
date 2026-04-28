@@ -45,5 +45,5 @@ spec:
           volumes:
           - name: update-materialized-views
             configMap:
-              name: update-materialized-views
+              name: {{ .Release.Name }}-postgres-refresh-mv-configmap
           restartPolicy: OnFailure
