@@ -7,6 +7,7 @@ import (
 	"klustercost/monitor/pkg/model"
 	"klustercost/monitor/pkg/persistence"
 	"strconv"
+	"strings"
 	"time"
 
 	prometheusApi "github.com/prometheus/client_golang/api"
@@ -66,7 +67,7 @@ func NewController(
 
 func (c *PodController) enqueuePod(obj interface{}) {
 	pod := obj.(*v1.Pod)
-	c.podqueue.Add(pod.ObjectMeta.Namespace + "/" + pod.ObjectMeta.Name)
+	c.podqueue.Add(pod.ObjectMeta.Namespace + "/" + pod.ObjectMeta.Name + "/" + string(pod.ObjectMeta.UID))
 }
 
 func (c *PodController) Run(ctx context.Context, workers int) error {
@@ -95,6 +96,23 @@ func (c *PodController) runWorker(ctx context.Context) {
 	}
 }
 
+func (c *PodController) splitMetaNamespaceUIDKey(key string) (namespace, name, uid string, err error) {
+	parts := strings.Split(key, "/")
+	switch len(parts) {
+	case 1:
+		// name only, no namespace, no uid
+		return "", parts[0], "", nil
+	case 2:
+		// namespace and name
+		return parts[0], parts[1], "", nil
+	case 3:
+		// namespace, name, and uid
+		return parts[0], parts[1], parts[2], nil
+	}
+
+	return "", "", "", fmt.Errorf("unexpected key format: %q", key)
+}
+
 func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 	obj, shutdown := c.podqueue.Get()
 
@@ -120,7 +138,7 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 			return nil
 		}
 
-		namespace, name, err := cache.SplitMetaNamespaceKey(key)
+		namespace, name, uid, err := c.splitMetaNamespaceUIDKey(key)
 		if err != nil {
 			runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
 			return nil
@@ -141,7 +159,7 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 				return err
 			}
 
-			err = persistence.GetPersistInterface().InsertPod(name, namespace, pod.Spec.NodeName, podUsage, appLabels, podResources)
+			err = persistence.GetPersistInterface().InsertPod(uid, name, namespace, pod.Spec.NodeName, podUsage, appLabels, podResources)
 
 			if err != nil {
 				c.podqueue.AddRateLimited(obj)

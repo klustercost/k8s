@@ -6,6 +6,7 @@ CREATE SEQUENCE IF NOT EXISTS klustercost.tbl_pod_data_idx_seq;
 CREATE TABLE IF NOT EXISTS klustercost.tbl_pods
 (
     idx integer NOT NULL DEFAULT nextval('klustercost.tbl_pods_idx_seq'::regclass),
+    uid character varying(63) COLLATE pg_catalog."default",
     name character varying(63) COLLATE pg_catalog."default",
     namespace character varying(253) COLLATE pg_catalog."default",
     node character varying(253) COLLATE pg_catalog."default",
@@ -38,6 +39,7 @@ CREATE TABLE IF NOT EXISTS klustercost.tbl_pod_data
 );
 
 CREATE OR REPLACE PROCEDURE klustercost.register_pod_data(
+	IN "arg.uid" character varying,
 	IN "arg.name" character varying,
 	IN "arg.namespace" character varying,
 	IN "arg.node" character varying,
@@ -62,11 +64,11 @@ AS $BODY$
         compare timestamp;
 		sample_count INTEGER;
 	BEGIN
-		SELECT idx INTO pod_id FROM klustercost.tbl_pods WHERE "arg.name" = tbl_pods.name;
+		SELECT idx INTO pod_id FROM klustercost.tbl_pods WHERE "arg.uid" = tbl_pods.uid;
 		IF pod_id IS NULL THEN
-            INSERT INTO klustercost.tbl_pods   (name, namespace, node)
-            VALUES ("arg.name", "arg.namespace", "arg.node");
-            SELECT idx INTO pod_id FROM klustercost.tbl_pods WHERE "arg.name" = klustercost.tbl_pods.name;
+            INSERT INTO klustercost.tbl_pods   (uid, name, namespace, node)
+            VALUES ("arg.uid", "arg.name", "arg.namespace", "arg.node");
+            SELECT idx INTO pod_id FROM klustercost.tbl_pods WHERE "arg.uid" = klustercost.tbl_pods.uid;
             IF "arg.app.name" IS NOT NULL THEN
                 UPDATE klustercost.tbl_pods SET "app.name" = "arg.app.name" WHERE idx = pod_id;
             END IF;
@@ -97,22 +99,6 @@ AS $BODY$
         END IF;	
 	END;
 $BODY$;
-
-CREATE OR REPLACE VIEW klustercost.tbl_nodes_verbose
- AS
- SELECT idx,
-    node,
-    mem,
-    cpu,
-    labels,
-    "node.kubernetes.io/instance-type",
-    "topology.kubernetes.io/region",
-    "topology.kubernetes.io/zone",
-    "kubernetes.io/os",
-    price_per_hour,
-    price_per_hour / mem AS mb_price_per_hour,
-    price_per_hour / cpu AS cpu_price_per_hour
-   FROM tbl_nodes;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS klustercost.tbl_pod_data_verbose_mv
 TABLESPACE pg_default
@@ -171,6 +157,12 @@ CREATE OR REPLACE VIEW klustercost.tbl_pod_data_verbose
 CREATE INDEX IF NOT EXISTS tbl_pods_idx
     ON klustercost.tbl_pods USING btree
     (idx ASC NULLS LAST)
+    WITH (fillfactor=100, deduplicate_items=True)
+    TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS tbl_pods_uid
+    ON klustercost.tbl_pods USING btree
+    (uid ASC NULLS LAST)
     WITH (fillfactor=100, deduplicate_items=True)
     TABLESPACE pg_default;
 
