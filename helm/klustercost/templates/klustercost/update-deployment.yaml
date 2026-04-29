@@ -27,11 +27,20 @@ spec:
             - name: host
               value: {{ .Release.Name }}-postgres-service.{{ .Release.Namespace }}.svc.cluster.local
             - name: database
-              value: {{ .Values.postgresql.name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgres-secret
+                  key: POSTGRES_DB
             - name: user
-              value: {{ .Values.postgresql.username }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgres-secret
+                  key: POSTGRES_USER
             - name: password
-              value: {{ .Values.postgresql.password }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgres-secret
+                  key: POSTGRES_PASSWORD
             - name: port
               value: "{{ printf "%v" .Values.postgresql.port }}"
           resources:

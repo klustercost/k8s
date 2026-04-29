@@ -27,11 +27,20 @@ spec:
             - name: CONTROLLER_WORKERS
               value: "{{ printf "%v" .Values.monitor.workers }}"
             - name: PG_DB_USER
-              value: {{ .Values.postgresql.username }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgres-secret
+                  key: POSTGRES_USER
             - name: PG_DB_PASS
-              value: {{ .Values.postgresql.password }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgres-secret
+                  key: POSTGRES_PASSWORD
             - name: PG_DB_NAME
-              value: {{ .Values.postgresql.name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgres-secret
+                  key: POSTGRES_DB
             - name: PG_DB_HOST
               value: {{ .Release.Name }}-postgres-service.{{ .Release.Namespace }}.svc.cluster.local
             - name: PG_DB_PORT

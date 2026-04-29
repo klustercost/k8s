@@ -42,11 +42,20 @@ spec:
             - name: PG_PORT
               value: {{ .Values.postgresql.port | quote }}
             - name: PG_USER
-              value: {{ .Values.postgresql.username | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgres-secret
+                  key: POSTGRES_USER
             - name: PG_PASSWORD
-              value: {{ .Values.postgresql.password | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgres-secret
+                  key: POSTGRES_PASSWORD
             - name: PG_DATABASE
-              value: {{ .Values.postgresql.name | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgres-secret
+                  key: POSTGRES_DB
             - name: PG_SCHEMA
               value: {{ .Values.mcp.postgresql.schema | quote }}
             - name: MCP_HOST

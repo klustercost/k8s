@@ -1,3 +1,4 @@
+{{- if .Values.postgresql.tls.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -6,10 +7,6 @@ metadata:
   labels:
     {{- include "klustercost.componentLabels" (dict "context" . "component" "postgres") | nindent 4 }}
 data:
-  POSTGRES_DB: {{ .Values.postgresql.name }}
-  POSTGRES_USER: {{ .Values.postgresql.username }}
-  POSTGRES_PASSWORD: {{ .Values.postgresql.password }}
-  {{- if .Values.postgresql.tls.enabled }}
   pg_hba.conf: |
     # Allow local connections
     local all all trust
