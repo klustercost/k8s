@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-postgres-refresh-mv-configmap
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "klustercost.componentLabels" (dict "context" . "component" "postgres") | nindent 4 }}
+data:
+  statements.sql: REFRESH MATERIALIZED VIEW tbl_pod_data_verbose_mv;    

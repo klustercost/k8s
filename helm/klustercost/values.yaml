@@ -16,6 +16,7 @@ imageRegistry:
 postgresql:
   enabled: true
   image: postgres:17
+  clientImage: ghcr.io/klustercost/k8s/klustercost-psql:latest
   name: klustercost
   username: klustercost
   password: klustercost
