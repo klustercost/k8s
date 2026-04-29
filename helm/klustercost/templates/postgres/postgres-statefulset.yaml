@@ -36,8 +36,8 @@ spec:
           - hba_file=/etc/postgresql/pg_hba.conf
         {{- end }}
         envFrom:
-        - configMapRef:
-            name: {{ .Release.Name }}-postgres-config
+        - secretRef:
+            name: {{ .Release.Name }}-postgres-secret
         ports:
         - containerPort: 5432
         volumeMounts:

@@ -25,9 +25,15 @@ spec:
         - name: BOT_TYPE
           value: {{ .Values.teams.botType }}
         - name: CLIENT_ID
-          value: {{ .Values.teams.clientId | quote }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-teams-secret
+              key: CLIENT_ID
         - name: TENANT_ID
-          value: {{ .Values.teams.tenantId | quote }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-teams-secret
+              key: TENANT_ID
         image: {{ .Values.teams.image }}
         imagePullPolicy: Always
         name: kc-teamsb
