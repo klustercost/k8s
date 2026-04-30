@@ -24,9 +24,20 @@ spec:
             - name: PGPORT
               value: {{ .Values.postgresql.port | quote }}
             - name: PGUSER
-              value: {{ .Values.postgresql.username | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgres-secret
+                  key: POSTGRES_USER
             - name: PGPASSWORD
-              value: {{ .Values.postgresql.password | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: PGDATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgres-secret
+                  key: POSTGRES_DB
             image: {{ .Values.postgresql.clientImage }}
             imagePullPolicy: Always
             command: [ "psql", "-f", "/klustercost/statements.sql" ]
