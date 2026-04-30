@@ -97,8 +97,8 @@ wafrontend:
     limits:
       cpu: 200m
       memory: 256Mi
-  accesstoken:
-  verifytoken:
+  accesstoken: ""
+  verifytoken: ""
   template: "more_data"
   templateContext: ""
 
