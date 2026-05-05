@@ -5,19 +5,19 @@ CREATE SEQUENCE IF NOT EXISTS klustercost.tbl_pod_data_idx_seq;
 
 CREATE TABLE IF NOT EXISTS klustercost.tbl_pods
 (
-    idx integer NOT NULL DEFAULT nextval('klustercost.tbl_pods_idx_seq'::regclass),
-    uid character varying(63) COLLATE pg_catalog."default",
-    name character varying(63) COLLATE pg_catalog."default",
-    namespace character varying(253) COLLATE pg_catalog."default",
-    node character varying(253) COLLATE pg_catalog."default",
-    "app.name" character varying(63) COLLATE pg_catalog."default",
-    "app.instance" character varying(63) COLLATE pg_catalog."default",
-    "app.version" character varying(63) COLLATE pg_catalog."default",
-    "app.component" character varying(63) COLLATE pg_catalog."default",
-    "app.part-of" character varying(63) COLLATE pg_catalog."default",
-    "app.managed-by" character varying(63) COLLATE pg_catalog."default",
+    idx integer NOT NULL DEFAULT nextval('tbl_pods_idx_seq'::regclass),
+    uid character varying(63) COLLATE pg_catalog."default" NOT NULL,    
+    name character varying(63) COLLATE pg_catalog."default" DEFAULT 'unclasified'::character varying,
+    namespace character varying(253) COLLATE pg_catalog."default" DEFAULT 'unclasified'::character varying,
+    node character varying(253) COLLATE pg_catalog."default" DEFAULT 'unclasified'::character varying,
+    "app.name" character varying(63) COLLATE pg_catalog."default" DEFAULT 'unclasified'::character varying,
+    "app.instance" character varying(63) COLLATE pg_catalog."default" DEFAULT 'unclasified'::character varying,
+    "app.version" character varying(63) COLLATE pg_catalog."default" DEFAULT 'unclasified'::character varying,
+    "app.component" character varying(63) COLLATE pg_catalog."default" DEFAULT 'unclasified'::character varying,
+    "app.part-of" character varying(63) COLLATE pg_catalog."default" DEFAULT 'unclasified'::character varying,
+    "app.managed-by" character varying(63) COLLATE pg_catalog."default" DEFAULT 'unclasified'::character varying
     CONSTRAINT tbl_pods_pkey PRIMARY KEY (idx)
-);
+)
 
 CREATE TABLE IF NOT EXISTS klustercost.tbl_pod_data
 (
