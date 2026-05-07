@@ -33,7 +33,7 @@ def patch(name,namespace,values):
 
 if __name__ == "__main__":
     imperative_values = json.loads(environ.get("EXTRA_ITEMS_JSON"))
-    ipv4 = [ x for x in get_data() if ':' not in x] 
+    ipv4 = [ x for x in get_data() if x is not None and ':' not in x]
 
     patch_result = patch(
         name=environ.get("SERVICE_TO_PATCH"), 
