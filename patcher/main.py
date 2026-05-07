@@ -35,6 +35,10 @@ if __name__ == "__main__":
     imperative_values = json.loads(environ.get("EXTRA_ITEMS_JSON"))
     ipv4 = [ x for x in get_data() if x is not None and ':' not in x]
 
+    if len(ipv4) == 0:
+        logging.info("no valid ipv4 addresses found, exiting")
+        exit(0)
+
     patch_result = patch(
         name=environ.get("SERVICE_TO_PATCH"), 
         namespace=environ.get("NAMESPACE"),
