@@ -1,0 +1,60 @@
+{{- if .Values.gateway.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ .Release.Name }}-gateway
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    cert-manager.io/issuer: {{ .Release.Name }}-letsencrypt-prod
+spec:
+  gatewayClassName: {{ .Values.gateway.className }}
+  listeners:
+  - name: http
+    allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: '*.{{ .Values.gateway.domain }}'
+    port: 80
+    protocol: HTTP
+  {{- if .Values.wafrontend.enabled }}
+  - name: https-whatsapp
+    allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: whatsapp.{{ .Values.gateway.domain }}
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - group: ""
+        kind: Secret
+        name: {{ .Release.Name }}-whatsapp-tls
+      mode: Terminate
+  {{- end }}
+  {{- if .Values.teams.enabled }}
+  - name: https-teams
+    allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: teams.{{ .Values.gateway.domain }}
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - group: ""
+        kind: Secret
+        name: {{ .Release.Name }}-teams-tls
+      mode: Terminate
+  {{- end }}
+  {{- if .Values.postgresql.enabled }}
+  - name: postgres
+    allowedRoutes:
+      kinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+      namespaces:
+        from: Same
+    port: 5432
+    protocol: TCP
+  {{- end }}    
+{{- end }}

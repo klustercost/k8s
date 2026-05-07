@@ -1,0 +1,20 @@
+{{- if .Values.gateway.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ .Release.Name }}-letsencrypt-prod
+  namespace: {{ .Release.Namespace }}
+spec:
+  acme:
+    email: contact@{{ .Values.gateway.domain }}
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: {{ .Release.Name }}-letsencrypt-prod-account-key
+    solvers:
+    - http01:
+        gatewayHTTPRoute:
+          parentRefs:
+          - name: {{ .Release.Name }}-gateway
+            namespace: {{ .Release.Namespace }}
+            kind: Gateway
+{{- end }}
