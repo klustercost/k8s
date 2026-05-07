@@ -25,6 +25,7 @@ if __name__ == "__main__":
     try:
         current_version = v1.read_namespaced_secret(name=SECRET_TO_WATCH, namespace=NAMESPACE).metadata.resource_version
     except client.exceptions.ApiException as e:
+        logging.error(f"Exception while fetching secret: {e}")
         current_version = None
     logging.info(f"Secret {SECRET_TO_WATCH} has current version: {current_version}")
     while True:
