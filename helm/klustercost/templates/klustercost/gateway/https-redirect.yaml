@@ -1,0 +1,20 @@
+{{- if .Values.gateway.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ .Release.Name }}-https-redirect
+  namespace: {{ .Release.Namespace }}
+spec:
+  parentRefs:
+  - name: {{ .Release.Name }}-gateway
+    sectionName: http
+  hostnames:
+  - whatsapp.{{ .Values.gateway.domain }}
+  - teams.{{ .Values.gateway.domain }}
+  rules:
+  - filters:
+    - type: RequestRedirect
+      requestRedirect:
+        scheme: https
+        statusCode: 301
+{{- end }}

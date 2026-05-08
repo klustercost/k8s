@@ -54,6 +54,23 @@ spec:
           readOnly: true
           mountPath: /tls
         {{- end }}
+      {{- if .Values.postgresql.tls.enabled }}
+      - image: {{ .Values.postgresql.secretMonitorImage }}
+        imagePullPolicy: Always
+        name: secret-monitor
+        env:
+        - name: SECRET_TO_WATCH
+          value: postgres-tls
+        resources:
+          limits:
+            cpu: 250m
+            memory: 64Mi
+          requests:
+            cpu: 50m
+            memory: 8Mi
+      serviceAccount: {{ .Release.Name }}-klustercost
+      serviceAccountName: {{ .Release.Name }}-klustercost
+      {{- end }}
       volumes:
       {{- if .Values.postgresql.tls.enabled }}
       - name: config

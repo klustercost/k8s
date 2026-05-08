@@ -16,15 +16,16 @@ imageRegistry:
 postgresql:
   enabled: true
   image: postgres:17
+  secretMonitorImage: ghcr.io/klustercost/k8s/klustercost-secret-monitor:latest
   clientImage: ghcr.io/klustercost/k8s/klustercost-psql:latest
   name: klustercost
   username: klustercost
   password: klustercost
   tls:
-    enabled: false
+    enabled: true
   port: 5432
   pvc:
-    enabled: false
+    enabled: true
     size: 8Gi
     storageClass: "managed-csi"
   serviceType: ClusterIP
@@ -127,3 +128,9 @@ teams:
   tenantId: ""
   clientId: ""
   botType: "UserAssignedMsi"
+
+gateway:
+  enabled: true
+  className: "nginx"
+  domain: "klustercost.cloud"
+  organization: "klustercost"

@@ -1,0 +1,30 @@
+{{- if .Values.postgresql.enabled }}
+{{- if .Values.postgresql.tls.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Release.Name }}-postgres-klustercost-tls
+  namespace: {{ .Release.Namespace }}
+spec:
+  secretName: postgres-tls
+  duration: 2160h # 90d
+  renewBefore: 360h # 15d
+  subject:
+    organizations:
+    - {{ .Values.gateway.organization }}
+  commonName: data.{{ .Values.gateway.domain }}
+  isCA: false
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  usages:
+    - digital signature
+    - key encipherment
+  dnsNames:
+    - data.{{ .Values.gateway.domain }}
+  issuerRef:
+    name: {{ .Release.Name }}-letsencrypt-prod
+    kind: Issuer
+    group: cert-manager.io
+{{- end }}    
+{{- end }}
