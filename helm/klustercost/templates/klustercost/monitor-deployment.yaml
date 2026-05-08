@@ -60,7 +60,7 @@ spec:
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
       dnsPolicy: ClusterFirst
-      serviceAccountName: klustercost
-      serviceAccount: klustercost
+      serviceAccountName: {{ .Release.Name }}-klustercost
+      serviceAccount: {{ .Release.Name }}-klustercost
       securityContext: {}
       schedulerName: default-scheduler
