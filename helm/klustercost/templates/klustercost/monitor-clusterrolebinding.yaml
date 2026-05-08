@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: klustercost
+  name: {{ .Release.Name }}-klustercost
   labels:
     {{- include "klustercost.componentLabels" (dict "context" . "component" "monitor") | nindent 4 }}
 roleRef:
@@ -10,5 +10,5 @@ roleRef:
   name: cluster-admin
 subjects:
 - kind: ServiceAccount
-  name: klustercost
+  name: {{ .Release.Name }}-klustercost
   namespace: {{ .Release.Namespace }}
