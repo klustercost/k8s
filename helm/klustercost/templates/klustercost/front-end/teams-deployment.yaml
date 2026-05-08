@@ -15,7 +15,7 @@ spec:
       labels:
         {{- include "klustercost.componentLabels" (dict "context" . "component" "teams-frontend") | nindent 8 }}
     spec:
-      serviceAccountName: azure-bot-sa
+      serviceAccountName: {{ .Release.Name }}-azure-bot-sa
       containers:
       - env:
         - name: PORT
