@@ -84,7 +84,7 @@ mcp:
   postgresql:
     schema: "klustercost"
 
-wafrontend:
+whatsappfrontend:
   enabled: true
   image: ghcr.io/klustercost/k8s/klustercost-wab:latest
   port: 80
