@@ -157,26 +157,26 @@ The MCP (Model Context Protocol) components provide an AI-powered assistant that
 |-----|------|---------|-------------|
 | `mcp.postgresql.schema` | string | `"klustercost"` | PostgreSQL schema the MCP server reads cost data from. |
 
-### `wafrontend` — Web Frontend
+### `whatsappfrontend` — Web Frontend
 
 A web-based dashboard for browsing cost data.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `wafrontend.enabled` | bool | `true` | Deploy the web frontend. |
-| `wafrontend.image` | string | `"ghcr.io/klustercost/k8s/klustercost-wab:latest"` | Docker image for the frontend. |
-| `wafrontend.port` | int | `80` | Service port exposed externally. |
-| `wafrontend.targetPort` | int | `5000` | Port the container listens on internally. |
-| `wafrontend.serviceType` | string | `"ClusterIP"` | Kubernetes Service type (`ClusterIP`, `NodePort`, `LoadBalancer`). |
-| `wafrontend.replicas` | int | `1` | Number of frontend replicas. |
-| `wafrontend.resources.requests.cpu` | string | `"50m"` | CPU request. |
-| `wafrontend.resources.requests.memory` | string | `"64Mi"` | Memory request. |
-| `wafrontend.resources.limits.cpu` | string | `"200m"` | CPU limit. |
-| `wafrontend.resources.limits.memory` | string | `"256Mi"` | Memory limit. |
-| `wafrontend.accesstoken` | string | `""` | Access token for webhook verification (platform-specific). |
-| `wafrontend.verifytoken` | string | `""` | Verify token for webhook verification (platform-specific). |
-| `wafrontend.template` | string | `"standard_simple_reply"` | Response template name controlling the frontend's reply format. |
-| `wafrontend.templateContext` | string | `""` | Additional context injected into the response template. |
+| `whatsappfrontend.enabled` | bool | `true` | Deploy the web frontend. |
+| `whatsappfrontend.image` | string | `"ghcr.io/klustercost/k8s/klustercost-wab:latest"` | Docker image for the frontend. |
+| `whatsappfrontend.port` | int | `80` | Service port exposed externally. |
+| `whatsappfrontend.targetPort` | int | `5000` | Port the container listens on internally. |
+| `whatsappfrontend.serviceType` | string | `"ClusterIP"` | Kubernetes Service type (`ClusterIP`, `NodePort`, `LoadBalancer`). |
+| `whatsappfrontend.replicas` | int | `1` | Number of frontend replicas. |
+| `whatsappfrontend.resources.requests.cpu` | string | `"50m"` | CPU request. |
+| `whatsappfrontend.resources.requests.memory` | string | `"64Mi"` | Memory request. |
+| `whatsappfrontend.resources.limits.cpu` | string | `"200m"` | CPU limit. |
+| `whatsappfrontend.resources.limits.memory` | string | `"256Mi"` | Memory limit. |
+| `whatsappfrontend.accesstoken` | string | `""` | Access token for webhook verification (platform-specific). |
+| `whatsappfrontend.verifytoken` | string | `""` | Verify token for webhook verification (platform-specific). |
+| `whatsappfrontend.template` | string | `"standard_simple_reply"` | Response template name controlling the frontend's reply format. |
+| `whatsappfrontend.templateContext` | string | `""` | Additional context injected into the response template. |
 
 ### `powerbi` — Power BI IP Allowlist
 

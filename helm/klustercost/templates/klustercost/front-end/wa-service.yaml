@@ -1,17 +1,17 @@
-{{- if .Values.wafrontend.enabled }}
+{{- if .Values.whatsappfrontend.enabled }}
 kind: Service
 apiVersion: v1
 metadata:
-  name: {{ .Release.Name }}-wa-frontend
+  name: {{ .Release.Name }}-whatsapp-frontend
   labels:
     {{- include "klustercost.componentLabels" (dict "context" . "component" "frontend") | nindent 4 }}
 spec:
   ports:
     - name: http
       protocol: TCP
-      port: {{ .Values.wafrontend.port }}
-      targetPort: {{ .Values.wafrontend.targetPort }}
+      port: {{ .Values.whatsappfrontend.port }}
+      targetPort: {{ .Values.whatsappfrontend.targetPort }}
   selector:
     {{- include "klustercost.componentSelectorLabels" (dict "context" . "component" "frontend") | nindent 4 }}
-  type: {{ .Values.wafrontend.serviceType }}
+  type: {{ .Values.whatsappfrontend.serviceType }}
 {{- end }}

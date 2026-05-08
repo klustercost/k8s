@@ -1,12 +1,12 @@
-{{- if .Values.wafrontend.enabled }}
+{{- if .Values.whatsappfrontend.enabled }}
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: {{ .Release.Name }}-wa-frontend
+  name: {{ .Release.Name }}-whatsapp-frontend
   labels:
     {{- include "klustercost.componentLabels" (dict "context" . "component" "frontend") | nindent 4 }}
 spec:
-  replicas: {{ .Values.wafrontend.replicas }}
+  replicas: {{ .Values.whatsappfrontend.replicas }}
   selector:
     matchLabels:
       {{- include "klustercost.componentSelectorLabels" (dict "context" . "component" "frontend") | nindent 6 }}
@@ -17,46 +17,46 @@ spec:
     spec:
       containers:
         - name: kc-wab
-          image: {{ .Values.wafrontend.image }}
+          image: {{ .Values.whatsappfrontend.image }}
           env:
             - name: VERIFY_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Release.Name }}-wa-frontend
+                  name: {{ .Release.Name }}-whatsapp-frontend
                   key: VERIFY_TOKEN
             - name: ACCESS_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Release.Name }}-wa-frontend
+                  name: {{ .Release.Name }}-whatsapp-frontend
                   key: ACCESS_TOKEN
             - name: HOST_PORT
-              value: "{{ .Values.wafrontend.targetPort }}"
+              value: "{{ .Values.whatsappfrontend.targetPort }}"
             - name: MCP_CLIENT_ADDRESS
               value: http://{{ .Release.Name }}-mcp-client.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.mcp.client.port }}
             - name: TEMPLATE
-              value: {{ .Values.wafrontend.template | quote }}
+              value: {{ .Values.whatsappfrontend.template | quote }}
             - name: TEMPLATE_CONTEXT
-              value: {{ .Values.wafrontend.templateContext | quote }}
+              value: {{ .Values.whatsappfrontend.templateContext | quote }}
           resources:
             requests:
-              cpu: {{ .Values.wafrontend.resources.requests.cpu }}
-              memory: {{ .Values.wafrontend.resources.requests.memory }}
+              cpu: {{ .Values.whatsappfrontend.resources.requests.cpu }}
+              memory: {{ .Values.whatsappfrontend.resources.requests.memory }}
             limits:
-              cpu: {{ .Values.wafrontend.resources.limits.cpu }}
-              memory: {{ .Values.wafrontend.resources.limits.memory }}
+              cpu: {{ .Values.whatsappfrontend.resources.limits.cpu }}
+              memory: {{ .Values.whatsappfrontend.resources.limits.memory }}
           ports:
-            - containerPort: {{ .Values.wafrontend.targetPort }}
+            - containerPort: {{ .Values.whatsappfrontend.targetPort }}
               protocol: TCP   
           readinessProbe:
             httpGet:
               path: /healthz
-              port: {{ .Values.wafrontend.targetPort }}
+              port: {{ .Values.whatsappfrontend.targetPort }}
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /healthz
-              port: {{ .Values.wafrontend.targetPort }}
+              port: {{ .Values.whatsappfrontend.targetPort }}
             initialDelaySeconds: 10
             periodSeconds: 30                     
 {{- end }}

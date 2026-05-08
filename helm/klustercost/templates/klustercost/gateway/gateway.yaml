@@ -16,7 +16,7 @@ spec:
     hostname: '*.{{ .Values.gateway.domain }}'
     port: 80
     protocol: HTTP
-  {{- if .Values.wafrontend.enabled }}
+  {{- if .Values.whatsappfrontend.enabled }}
   - name: https-whatsapp
     allowedRoutes:
       namespaces:

@@ -40,10 +40,10 @@
   {{- end }}
 {{- end }}
 
-{{- if .Values.wafrontend.enabled }}
+{{- if .Values.whatsappfrontend.enabled }}
 
-  Web frontend is running on port {{ .Values.wafrontend.port }}.
-  Service type: {{ .Values.wafrontend.serviceType }}
+  Web frontend is running on port {{ .Values.whatsappfrontend.port }}.
+  Service type: {{ .Values.whatsappfrontend.serviceType }}
 {{- end }}
 
 {{- if .Values.teams.enabled }}
