@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS klustercost.tbl_pods
     "app.part-of" character varying(63) COLLATE pg_catalog."default" DEFAULT 'unclasified'::character varying,
     "app.managed-by" character varying(63) COLLATE pg_catalog."default" DEFAULT 'unclasified'::character varying,
     CONSTRAINT tbl_pods_pkey PRIMARY KEY (idx)
-)
+);
 
 CREATE TABLE IF NOT EXISTS klustercost.tbl_pod_data
 (
