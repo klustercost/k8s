@@ -69,7 +69,7 @@ spec:
             cpu: 50m
             memory: 8Mi
       serviceAccount: {{ .Release.Name }}-klustercost
-      serviceAccountName: {{ .Release.Name }}-klustercost            
+      serviceAccountName: {{ .Release.Name }}-klustercost
       {{- end }}
       volumes:
       {{- if .Values.postgresql.tls.enabled }}
