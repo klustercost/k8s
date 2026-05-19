@@ -8,10 +8,10 @@ CREATE TABLE IF NOT EXISTS klustercost.tbl_pods
     node character varying(253) COLLATE pg_catalog."default",
     "app.name" character varying(63) COLLATE pg_catalog."default",
     "app.instance" character varying(63) COLLATE pg_catalog."default",
-    "app.version" character varying(63) COLLATE pg_catalog."default",
     "app.component" character varying(63) COLLATE pg_catalog."default",
-    "app.part-of" character varying(63) COLLATE pg_catalog."default",
+    "app.version" character varying(63) COLLATE pg_catalog."default",
     "app.managed-by" character varying(63) COLLATE pg_catalog."default",
+    "app.part-of" character varying(63) COLLATE pg_catalog."default",
     CONSTRAINT tbl_pods_pkey PRIMARY KEY (uid)
 );
 
