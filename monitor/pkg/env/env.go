@@ -21,6 +21,12 @@ type EnvVars struct {
 	PrometheusServer  string
 }
 
+var EnvironmentVariables *EnvVars
+
+func init() {
+	EnvironmentVariables = NewConfiguration()
+}
+
 // InitEnvVars reads the env file and sets the env variables
 // If the env file is not found, it uses the default values
 func NewConfiguration() *EnvVars {
@@ -45,7 +51,7 @@ func NewConfiguration() *EnvVars {
 		}
 	}
 
-	//Defualt values for the env variables
+	//Default values for the env variables
 	result := &EnvVars{600, 2, "postgres", "admin", "klustercost", "localhost", "5432", "http://127.0.0.1:8080"}
 
 	resync_time, err := strconv.Atoi(os.Getenv("RESYNC_TIME"))
