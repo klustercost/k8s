@@ -1,0 +1,10 @@
+[
+    {
+        "query": "scalar(sum(rate(container_cpu_usage_seconds_total{namespace=\"$namespace$\",pod=~\"$name$\",container_name!=\"POD\"}[10m])) by (pod))",
+        "transform": "{\"cpu\": $[1].$number()}"
+    },
+    {
+        "query": "scalar(max(avg_over_time(container_memory_rss{namespace=\"$namespace$\",pod=~\"$name$\",container_name!=\"POD\"}[10m])) > max(avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace$\",pod=~\"$name$*\",container_name!=\"POD\"}[10m])) or  max(avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace$\",pod=~\"$name$\",container_name!=\"POD\"}[10m])))/1024/1024",
+        "transform": "{\"mem\": $[1].$number()}"
+    }
+]
