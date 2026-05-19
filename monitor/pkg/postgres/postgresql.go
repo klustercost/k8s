@@ -60,6 +60,18 @@ func (pg *persistence_pg) InsertPod(pod_uid, pod_name, namespace, node string, p
 	return nil
 }
 
+// This function inserts the details of a pod into the database
+// It calls the klustercost.register_pod_data_json stored procedure
+func (pg *persistence_pg) InsertPodJson(pod_json string) error {
+	_, err := pg.db_connection.Exec("CALL klustercost.register_pod_json($1)", pod_json)
+	if err != nil {
+		fmt.Println("Error inserting pod details into the database:", err)
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+		return err
+	}
+	return nil
+}
+
 // This function inserts the details of a node into the database
 // price_per_hour to be added to the function argument and to the query once it is actually defined
 func (pg *persistence_pg) InsertNode(node_name string, nodeMisc *model.NodeMisc) error {
