@@ -1,8 +1,6 @@
 package observer
 
-import "context"
-
 type Controller interface {
-	Run(context.Context, int) error
+	Run(int) error
 	FriendlyName() string
 }
