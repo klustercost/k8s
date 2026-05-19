@@ -28,7 +28,6 @@ type NodeController struct {
 }
 
 func NewNodeController(
-	ctx context.Context,
 	kubeclientset kubernetes.Interface,
 	informer informers.SharedInformerFactory) *NodeController {
 

@@ -61,7 +61,7 @@ func main() {
 	// All new controllers to be initialized from here
 	controllers = append(controllers,
 		controller.NewPodController(kubeClient, kubeInformerFactory),
-		controller.NewNodeController(signals.Ctx, kubeClient, kubeInformerFactory),
+		controller.NewNodeController(kubeClient, kubeInformerFactory),
 	)
 
 	kubeInformerFactory.Start(signals.Ctx.Done())
