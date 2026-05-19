@@ -15,6 +15,27 @@ CREATE TABLE IF NOT EXISTS klustercost.tbl_pods
     CONSTRAINT tbl_pods_pkey PRIMARY KEY (uid)
 );
 
+CREATE INDEX IF NOT EXISTS tbl_pods_app_component
+    ON klustercost.tbl_pods USING hash
+    ("app.component" COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS tbl_pods_app_name
+    ON klustercost.tbl_pods USING hash
+    ("app.name" COLLATE pg_catalog."default")
+    TABLESPACE pg_default;    
+
+CREATE INDEX IF NOT EXISTS tbl_pods_namespace
+    ON klustercost.tbl_pods USING hash
+    (namespace COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS tbl_pods_uid
+    ON klustercost.tbl_pods USING btree
+    (uid COLLATE pg_catalog."default" ASC NULLS LAST)
+    WITH (fillfactor=100, deduplicate_items=True)
+    TABLESPACE pg_default;
+
 create type pod_type as (
   uid text,
   name text,
@@ -43,6 +64,18 @@ CREATE TABLE IF NOT EXISTS klustercost.tbl_pod_data
         ON DELETE NO ACTION
 );
 
+CREATE INDEX IF NOT EXISTS tbl_pod_data_timestamp
+    ON klustercost.tbl_pod_data USING btree
+    ("timestamp" ASC NULLS LAST)
+    WITH (fillfactor=100, deduplicate_items=True)
+    TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS tbl_pod_data_uid
+    ON klustercost.tbl_pod_data USING btree
+    (uid COLLATE pg_catalog."default" ASC NULLS LAST)
+    WITH (fillfactor=100, deduplicate_items=True)
+    TABLESPACE pg_default;
+
 create type pod_data_type as (
   uid text,
   cpu double precision,
@@ -52,6 +85,59 @@ create type pod_data_type as (
   mem_request double precision,  
   mem_limit double precision
 );
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS klustercost.tbl_pod_data_verbose_mv
+TABLESPACE pg_default
+AS
+ SELECT 
+ 	uid,
+    "timestamp",
+    cpu,
+    mem,
+    cpu_request,
+    cpu_limit,
+    mem_request,
+    mem_limit,
+    cpu_price,
+    mem_price,
+        CASE
+            WHEN cpu_price > mem_price THEN cpu_price
+            ELSE mem_price
+        END AS price,
+    "timestamp"::date AS date,
+    to_char("timestamp", 'HH24'::text)::integer AS hour
+   FROM ( SELECT 
+   			tbl_pod_data.uid,
+            tbl_pod_data."timestamp",
+            tbl_pod_data.cpu,
+            tbl_pod_data.mem,
+            tbl_pod_data.cpu_request,
+            tbl_pod_data.cpu_limit,
+            tbl_pod_data.mem_request,
+            tbl_pod_data.mem_limit,
+            tbl_pod_data.cpu * tbl_nodes_verbose.cpu_price_per_hour AS cpu_price,
+            tbl_pod_data.mem * tbl_nodes_verbose.mb_price_per_hour AS mem_price
+           FROM tbl_pod_data
+             LEFT JOIN tbl_pods ON tbl_pod_data.uid = tbl_pods.uid
+             LEFT JOIN tbl_nodes_verbose ON tbl_pods.node::text = tbl_nodes_verbose.node::text) _;
+
+CREATE OR REPLACE VIEW klustercost.tbl_pod_data_verbose
+ AS
+ SELECT 
+ 	uid,
+    "timestamp",
+    cpu,
+    mem,
+    cpu_request,
+    cpu_limit,
+    mem_request,
+    mem_limit,
+    cpu_price,
+    mem_price,
+    price,
+    date,
+    hour
+   FROM tbl_pod_data_verbose_mv;
 
 CREATE OR REPLACE PROCEDURE klustercost.register_pod_json(
 	IN pod_sample jsonb)
