@@ -20,9 +20,20 @@ import (
 	"context"
 	"os"
 	"os/signal"
+
+	"k8s.io/klog/v2"
 )
 
+var Ctx context.Context
+var Logger klog.Logger
 var onlyOneSignalHandler = make(chan struct{})
+
+func init() {
+	klog.InitFlags(nil)
+	Ctx = SetupSignalHandler()
+	Logger = klog.FromContext(Ctx)
+	Logger.Info("Signal handler initialized")
+}
 
 // SetupSignalHandler registered for SIGTERM and SIGINT. A stop channel is returned
 // which is closed on one of these signals. If a second signal is caught, the program
