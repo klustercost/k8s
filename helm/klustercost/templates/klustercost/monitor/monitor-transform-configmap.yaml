@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-monitor-transform
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "klustercost.componentLabels" (dict "context" . "component" "monitor") | nindent 4 }}
+data:
+{{- (.Files.Glob "transform/pod/*").AsConfig | nindent 2 }}
