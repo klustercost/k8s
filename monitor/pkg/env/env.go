@@ -19,6 +19,7 @@ type EnvVars struct {
 	PgDbHost          string
 	PgDbPort          string
 	PrometheusServer  string
+	TransformPath     string
 }
 
 var EnvironmentVariables *EnvVars
@@ -52,7 +53,7 @@ func NewConfiguration() *EnvVars {
 	}
 
 	//Default values for the env variables
-	result := &EnvVars{600, 2, "postgres", "admin", "klustercost", "localhost", "5432", "http://127.0.0.1:8080"}
+	result := &EnvVars{600, 2, "postgres", "admin", "klustercost", "localhost", "5432", "http://127.0.0.1:8080", "./transforms"}
 
 	resync_time, err := strconv.Atoi(os.Getenv("RESYNC_TIME"))
 	if err == nil {
@@ -108,6 +109,13 @@ func NewConfiguration() *EnvVars {
 		result.PrometheusServer = prometheus_server
 	} else {
 		logger.Info("PROMETHEUS_SERVER not set, using default value http://127.0.0.1:8080")
+	}
+
+	transform_path := os.Getenv("TRANSFORM_PATH")
+	if transform_path != "" {
+		result.TransformPath = transform_path
+	} else {
+		logger.Info("TRANSFORM_PATH not set, using default value ./transforms")
 	}
 
 	return result

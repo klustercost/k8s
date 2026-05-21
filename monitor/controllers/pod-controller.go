@@ -5,7 +5,6 @@ import (
 	"fmt"
 	transform "klustercost/monitor/controllers/templates"
 	"klustercost/monitor/pkg/env"
-	"klustercost/monitor/pkg/model"
 	"klustercost/monitor/pkg/persistence"
 	"klustercost/monitor/pkg/signals"
 
@@ -22,14 +21,11 @@ import (
 	"k8s.io/klog/v2"
 )
 
-var e = env.NewConfiguration()
-
 type PodController struct {
 	kubeclientset kubernetes.Interface
 	podsLister    corelisters.PodLister
 	podsSynced    cache.InformerSynced
 	podqueue      workqueue.RateLimitingInterface
-	transform     *transform.Transform
 }
 
 func NewPodController(
@@ -42,8 +38,7 @@ func NewPodController(
 		kubeclientset: kubeclientset,
 		podsLister:    podInformer.Lister(),
 		podsSynced:    podInformer.Informer().HasSynced,
-		podqueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Pods"),
-		transform:     transform.NewTransform(signals.Ctx, "./transform/pod/")}
+		podqueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Pods")}
 
 	_, err := podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueuePod,
@@ -78,7 +73,7 @@ func (c *PodController) Run(workers int) error {
 	}
 
 	signals.Logger.Info("Starting workers for pods", "count", workers)
-	for i := 0; i < workers; i++ {
+	for range workers {
 		go wait.UntilWithContext(signals.Ctx, c.runWorker, time.Second)
 	}
 
@@ -86,11 +81,15 @@ func (c *PodController) Run(workers int) error {
 }
 
 func (c *PodController) runWorker(ctx context.Context) {
-	for c.processNextWorkItem(ctx) {
+	for c.processNextWorkItem(
+		ctx,
+		transform.NewTransform(
+			signals.Ctx,
+			env.EnvironmentVariables.TransformPath+c.baseTransformPath())) {
 	}
 }
 
-func (c *PodController) processNextWorkItem(ctx context.Context) bool {
+func (c *PodController) processNextWorkItem(ctx context.Context, transform *transform.Transform) bool {
 	obj, shutdown := c.podqueue.Get()
 
 	if shutdown {
@@ -121,14 +120,14 @@ func (c *PodController) processNextWorkItem(ctx context.Context) bool {
 			return nil
 		}
 
-		pod, err := c.initPodCollector(namespace, name)
+		pod, err := c.getPod(namespace, name)
 		if err != nil {
-			signals.Logger.Error(err, "Unable to init pod collector ")
+			signals.Logger.Error(err, "Unable to get pod from informer cache for key %s", key)
 			return nil
 		}
 
 		if pod.Status.Phase == v1.PodRunning {
-			transformedPodJson, err := c.transform.Transform(ctx, pod)
+			transformedPodJson, err := transform.Transform(ctx, pod)
 			if err != nil {
 				c.podqueue.AddRateLimited(obj)
 				runtime.HandleError(fmt.Errorf("Cannot transform pod JSON for key %s:", key))
@@ -163,28 +162,17 @@ func (c *PodController) FriendlyName() string {
 	return "PodController"
 }
 
+// Returns the friendly name of the controller
+func (c *PodController) baseTransformPath() string {
+	return "/pod/"
+}
+
 // This function retrieves the pod object from the informer cache.
-func (c *PodController) initPodCollector(namespace, name string) (*v1.Pod, error) {
+func (c *PodController) getPod(namespace, name string) (*v1.Pod, error) {
 	pod, err := c.podsLister.Pods(namespace).Get(name)
 	if err != nil {
 		signals.Logger.Error(err, "Error getting pod lister ")
 	}
 
 	return pod, err
-}
-
-// Returns owner_version, owner_kind, owner_name, owner_uid of a *v1.Pod
-func (c *PodController) returnOwnerReferences(pod *v1.Pod) *model.OwnerReferences {
-
-	ownerRef := &model.OwnerReferences{}
-
-	for _, v := range pod.ObjectMeta.OwnerReferences {
-		if v.Name != "" {
-			ownerRef.OwnerVersion = v.APIVersion
-			ownerRef.OwnerKind = v.Kind
-			ownerRef.OwnerName = v.Name
-			ownerRef.OwnerUid = string(v.UID)
-		}
-	}
-	return ownerRef
 }
