@@ -6,7 +6,4 @@ metadata:
   labels:
     {{- include "klustercost.componentLabels" (dict "context" . "component" "monitor") | nindent 4 }}
 data:
-{{- range $path, $_ := (.Files.Glob "transform/pod/*") }}
-  {{ trimPrefix "transform/pod/" $path }}: |
-    {{- $.Files.Get $path | nindent 4 }}
-{{ end }}
+{{- (.Files.Glob "transform/pod/*").AsConfig | nindent 2 }}
