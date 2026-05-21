@@ -1,4 +1,5 @@
 {{- if .Values.teams.enabled }}
+{{- if .Values.gateway.enabled }}
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -21,4 +22,5 @@ spec:
     backendRefs:
     - name: {{ .Release.Name }}-teams-frontend
       port: 80
+{{- end }}      
 {{- end }}

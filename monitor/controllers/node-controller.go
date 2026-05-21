@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"klustercost/monitor/pkg/model"
 	"klustercost/monitor/pkg/persistence"
+	"klustercost/monitor/pkg/signals"
 	"strings"
 	"time"
 
@@ -24,11 +25,9 @@ type NodeController struct {
 	nodesLister   corelisters.NodeLister
 	nodesSynced   cache.InformerSynced
 	nodequeue     workqueue.RateLimitingInterface
-	logger        klog.Logger
 }
 
 func NewNodeController(
-	ctx context.Context,
 	kubeclientset kubernetes.Interface,
 	informer informers.SharedInformerFactory) *NodeController {
 
@@ -38,8 +37,7 @@ func NewNodeController(
 		kubeclientset: kubeclientset,
 		nodesLister:   nodesInformer.Lister(),
 		nodesSynced:   nodesInformer.Informer().HasSynced,
-		nodequeue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Nodes"),
-		logger:        klog.FromContext(ctx)}
+		nodequeue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Nodes")}
 
 	_, err := nodesInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: nc.enqueueNode,
@@ -48,7 +46,7 @@ func NewNodeController(
 		},
 	})
 	if err != nil {
-		nc.logger.Error(err, "Klustercost:  unable to fetch nodes")
+		signals.Logger.Error(err, "Klustercost:  unable to fetch nodes")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
@@ -60,25 +58,25 @@ func (nc *NodeController) enqueueNode(obj interface{}) {
 	nc.nodequeue.Add(node.ObjectMeta.Name)
 }
 
-func (nc *NodeController) Run(ctx context.Context, workers int) error {
+func (nc *NodeController) Run(workers int) error {
 
 	defer runtime.HandleCrash()
 
-	nc.logger.Info("Klustercost: Starting node observer threads")
+	signals.Logger.Info("Klustercost: Starting node observer threads")
 
 	// Wait for the caches to be synced before starting workers
-	nc.logger.Info("Waiting for node informer caches to sync")
+	signals.Logger.Info("Waiting for node informer caches to sync")
 
-	if ok := cache.WaitForCacheSync(ctx.Done(), nc.nodesSynced); !ok {
+	if ok := cache.WaitForCacheSync(signals.Ctx.Done(), nc.nodesSynced); !ok {
 		return fmt.Errorf("failed to wait for node caches to sync")
 	}
 
-	nc.logger.Info("Starting workers for nodes", "count", workers)
+	signals.Logger.Info("Starting workers for nodes", "count", workers)
 	for i := 0; i < workers; i++ {
-		go wait.UntilWithContext(ctx, nc.runWorker, time.Second)
+		go wait.UntilWithContext(signals.Ctx, nc.runWorker, time.Second)
 	}
 
-	nc.logger.Info("Done")
+	signals.Logger.Info("Done")
 
 	return nil
 }
@@ -152,7 +150,7 @@ func (nc *NodeController) FriendlyName() string {
 func (nc *NodeController) getNodeMiscellaneous(name string) *model.NodeMisc {
 	node, err := nc.nodesLister.Get(name)
 	if err != nil {
-		nc.logger.Error(err, "Error getting node lister ")
+		signals.Logger.Error(err, "Error getting node lister ")
 	}
 
 	nodeMisc := &model.NodeMisc{}

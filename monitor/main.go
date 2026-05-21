@@ -11,11 +11,8 @@ import (
 	"klustercost/monitor/pkg/signals"
 	"klustercost/monitor/pkg/version"
 
-	prometheusApi "github.com/prometheus/client_golang/api"
-
 	controller "klustercost/monitor/controllers"
 
-	"github.com/go-logr/logr"
 	_ "github.com/lib/pq"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -26,7 +23,7 @@ import (
 
 var controllers []observer.Controller
 
-func get_config(loger logr.Logger) (*rest.Config, error) {
+func get_config() (*rest.Config, error) {
 	config, err := rest.InClusterConfig()
 	if nil == err {
 		return config, err
@@ -43,58 +40,38 @@ func get_config(loger logr.Logger) (*rest.Config, error) {
 }
 
 func main() {
-	klog.InitFlags(nil)
-	env := env.NewConfiguration()
-
-	ctx := signals.SetupSignalHandler()
-	logger := klog.FromContext(ctx)
-	logger.Info("Klustercost [Observer]", "v", version.Version)
+	signals.Logger.Info("Klustercost [Observer]", "v", version.Version)
 
 	defer persistence.Close()
 
-	config, err := get_config(logger)
+	config, err := get_config()
 	if err != nil {
-		logger.Error(err, "Cannot get a valid k8s context")
+		signals.Logger.Error(err, "Cannot get a valid k8s context")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		logger.Error(err, "Error building kubernetes clientset")
+		signals.Logger.Error(err, "Error building kubernetes clientset")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
-
-	prometheusaddress := env.PrometheusServer
-
-	if len(prometheusaddress) == 0 {
-		prometheusaddress = "http://prometheus-server.monitoring.svc.cluster.local:8080"
-	}
-
-	prometheusclient, err := prometheusApi.NewClient(prometheusApi.Config{Address: prometheusaddress})
-	if err != nil {
-		logger.Error(err, "Error creating prometheus api client")
-		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-	}
-
-	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, time.Second*time.Duration(env.ResyncTime))
+	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, time.Second*time.Duration(env.EnvironmentVariables.ResyncTime))
 
 	// Create the controllers
 	// All new controllers to be initialized from here
 	controllers = append(controllers,
-		controller.NewController(ctx, kubeClient, prometheusclient, kubeInformerFactory),
-		controller.NewNodeController(ctx, kubeClient, kubeInformerFactory),
-		controller.NewAppController(ctx, kubeClient, kubeInformerFactory),
-		controller.NewServiceController(ctx, kubeClient, kubeInformerFactory),
+		controller.NewPodController(kubeClient, kubeInformerFactory),
+		controller.NewNodeController(kubeClient, kubeInformerFactory),
 	)
 
-	kubeInformerFactory.Start(ctx.Done())
+	kubeInformerFactory.Start(signals.Ctx.Done())
 
 	for _, controller := range controllers {
-		if err = controller.Run(ctx, env.ControllerWorkers); err != nil {
-			logger.Error(err, "Error running ", controller.FriendlyName())
+		if err = controller.Run(env.EnvironmentVariables.ControllerWorkers); err != nil {
+			signals.Logger.Error(err, "Error running ", controller.FriendlyName())
 			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		}
 	}
 
-	<-ctx.Done()
+	<-signals.Ctx.Done()
 }

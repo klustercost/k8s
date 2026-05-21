@@ -1,4 +1,5 @@
 {{- if .Values.postgresql.enabled }}
+{{- if .Values.gateway.enabled }}
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: TCPRoute
 metadata:
@@ -12,4 +13,5 @@ spec:
   - backendRefs:
     - name: {{ .Release.Name }}-postgres-service
       port: 5432
+{{- end }}
 {{- end }}

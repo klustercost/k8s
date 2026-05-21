@@ -6,6 +6,8 @@ import (
 	promModel "github.com/prometheus/common/model"
 )
 
+type DataExchange map[string]interface{}
+
 // NodeMisc is a struct that contains the node miscellaneous information
 // It is used to insert data into the database
 // Used by node-controller.go
