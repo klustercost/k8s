@@ -48,7 +48,7 @@ spec:
             - name: PROMETHEUS_SERVER
               value: "{{ .Values.prometheus.prometheusServerAddress }}"
           volumeMounts:
-            - name: monitor-transform
+            - name: monitor-transform-pod
               mountPath: /transform/pod
               readOnly: true
           resources:
@@ -62,9 +62,9 @@ spec:
           terminationMessagePolicy: File
           imagePullPolicy: Always
       volumes:
-        - name: monitor-transform
+        - name: monitor-transform-pod
           configMap:
-            name: {{ .Release.Name }}-monitor-transform
+            name: {{ .Release.Name }}-monitor-transform-pod
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
       dnsPolicy: ClusterFirst

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Release.Name }}-monitor-transform
+  name: {{ .Release.Name }}-monitor-transform-pod
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "klustercost.componentLabels" (dict "context" . "component" "monitor") | nindent 4 }}
