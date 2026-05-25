@@ -12,6 +12,10 @@ CREATE TABLE klustercost.tbl_nodes (
     price_per_hour double precision
 );
 
+CREATE INDEX IF NOT EXISTS tbl_nodes_node
+    ON klustercost.tbl_nodes USING hash
+    (node COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
 
 CREATE OR REPLACE PROCEDURE add_node(
 	IN arg_node character varying,

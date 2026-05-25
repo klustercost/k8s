@@ -3,7 +3,7 @@
     $contains($value,"m") ? $number($substring($value,0,$length($value)-1)) / 1000 : $number($value)
   };
   $quantity_memory := function($value){
-    $contains($value,"Gi") ? $number($substring($value,0,$length($value)-2)) * 1024 * 1024 : $contains($value,"Mi") ? $number($substring($value,0,$length($value)-2)) * 1024 : $number($value) 
+    $contains($value,"Gi") ? $number($substring($value,0,$length($value)-2)) * 1024 * 1024 : $contains($value,"Mi") ? $number($substring($value,0,$length($value)-2)) * 1024 : $contains($value,"Ki") ? $number($substring($value,0,$length($value)-2)) : $contains($value,"K") ? $number($substring($value,0,$length($value)-1)) * 1000 / 1024 :  $contains($value,"M") ? $number($substring($value,0,$length($value)-1)) * 1000 :  $contains($value,"G") ? $number($substring($value,0,$length($value)-1)) * 1000 * 1000 :  $number($value) / 1024
   };
   {
     "uid":metadata.uid,
