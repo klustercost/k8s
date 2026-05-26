@@ -12,10 +12,10 @@ import (
 )
 
 type Transform struct {
-	jsonataInstance jsonata.JSONataInstance
-	logger          klog.Logger
-	objectTransform jsonata.Expression
-	factTransforms  []factColumn
+	jsonataInstance   jsonata.JSONataInstance
+	logger            klog.Logger
+	labelsTransform   jsonata.Expression
+	metricsTransforms []metricsTransform
 }
 
 func NewTransform(ctx context.Context, path string) *Transform {
@@ -27,11 +27,11 @@ func NewTransform(ctx context.Context, path string) *Transform {
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
-	var factTransforms []factColumn
+	var metricsTransforms []metricsTransform
 
-	factTransforms, err = NewFactsFromFile(path+"fact.json", instance)
+	metricsTransforms, err = NewMetricsTransformsFromFile(path+"fact.json", instance)
 	if err != nil {
-		logger.Error(err, "Unable to read fact transforms")
+		logger.Error(err, "Unable to read metrics transforms")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
@@ -42,15 +42,14 @@ func NewTransform(ctx context.Context, path string) *Transform {
 	}
 
 	return &Transform{
-		jsonataInstance: instance,
-		logger:          logger,
-		objectTransform: transform,
-		factTransforms:  factTransforms,
+		jsonataInstance:   instance,
+		logger:            logger,
+		labelsTransform:   transform,
+		metricsTransforms: metricsTransforms,
 	}
 }
 
 func getTransform(path string, jsonataInstance jsonata.JSONataInstance) (jsonata.Expression, error) {
-
 	transform, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -63,38 +62,46 @@ func getTransform(path string, jsonataInstance jsonata.JSONataInstance) (jsonata
 	return expression, nil
 }
 
-func (c *Transform) addFacts(ctx context.Context, object map[string]interface{}) (map[string]interface{}, error) {
-	for _, transform := range c.factTransforms {
-		object, err := transform.AddFact(ctx, object)
+func (c *Transform) addMetrics(ctx context.Context, keyValues model.DataExchange, sourceJSON []byte) (model.DataExchange, error) {
+	for _, transform := range c.metricsTransforms {
+		keyValues, err := transform.AddMetrics(ctx, keyValues, sourceJSON)
 		if err != nil {
-			return object, err
+			return keyValues, err
 		}
 	}
-	return object, nil
+	return keyValues, nil
 }
 
-func (c *Transform) Transform(ctx context.Context, source any) ([]byte, error) {
-	data, err := json.Marshal(source)
-	if err != nil {
-		c.logger.Error(err, "Unable to marshal source to JSON")
-		return nil, err
-	}
-
-	object, err := c.objectTransform.Evaluate(data, nil)
+func (c *Transform) getTransformedObject(sourceJSON []byte) (model.DataExchange, error) {
+	var transformedObject model.DataExchange
+	transformedJSON, err := c.labelsTransform.Evaluate(sourceJSON, nil)
 	if err != nil {
 		c.logger.Error(err, "Unable to evaluate template")
 		return nil, err
 	}
-	var keyVal model.DataExchange
-	err = json.Unmarshal(object, &keyVal)
+	err = json.Unmarshal(transformedJSON, &transformedObject)
 	if err != nil {
-		c.logger.Error(err, "Unable to unmarshal fact transforms")
+		c.logger.Error(err, "Unable to unmarshal transformed JSON to object")
 		return nil, err
 	}
-	keyVal, err = c.addFacts(ctx, keyVal)
+	return transformedObject, nil
+}
+
+func (c *Transform) Transform(ctx context.Context, source any) ([]byte, error) {
+	sourceJSON, err := json.Marshal(source)
 	if err != nil {
-		c.logger.Error(err, "Unable to add facts to object")
+		c.logger.Error(err, "Unable to marshal source to JSON")
 		return nil, err
 	}
-	return json.Marshal(keyVal)
+	transformedObject, err := c.getTransformedObject(sourceJSON)
+	if err != nil {
+		c.logger.Error(err, "Unable to get transformed object")
+		return nil, err
+	}
+	transformedObject, err = c.addMetrics(ctx, transformedObject, sourceJSON)
+	if err != nil {
+		c.logger.Error(err, "Unable to add metrics to object")
+		return nil, err
+	}
+	return json.Marshal(transformedObject)
 }
