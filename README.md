@@ -13,6 +13,22 @@ The project is designed to be deployed with Helm and to run inside an existing K
 - **User interfaces and integrations**: includes a web frontend, Microsoft Teams bot, MCP-based natural-language assistant, and Power BI-oriented integration support.
 - **Helm packaging**: deploys the full stack with configurable images, storage, Prometheus endpoint, MCP, Teams, and Power BI settings.
 
+## Compatibility
+
+KlusterCost currently provides built-in cost enrichment for Azure-based Kubernetes environments. Kubernetes resource monitoring and usage collection are portable, while automated pricing is currently backed by Azure retail pricing data.
+
+| Capability | Status |
+|------------|--------|
+| AKS | Supported |
+| Azure Retail Prices API | Supported |
+| EKS | Planned |
+| GKE | Planned |
+| On-prem Kubernetes | Possible with custom pricing |
+| AWS pricing integration | Planned |
+| GCP pricing integration | Planned |
+
+Non-Azure clusters can still be monitored for workloads, nodes, services, and Prometheus-based usage data, but built-in price enrichment currently targets Azure unless custom pricing is supplied.
+
 ## Architecture
 
 At a high level, KlusterCost runs as a set of cooperating services:
