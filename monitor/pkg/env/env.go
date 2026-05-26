@@ -53,7 +53,7 @@ func NewConfiguration() *EnvVars {
 	}
 
 	//Default values for the env variables
-	result := &EnvVars{600, 2, "postgres", "admin", "klustercost", "localhost", "5432", "http://127.0.0.1:8080", "./transforms"}
+	result := &EnvVars{600, 2, "postgres", "admin", "klustercost", "localhost", "5432", "http://127.0.0.1:8080", "./transform"}
 
 	resync_time, err := strconv.Atoi(os.Getenv("RESYNC_TIME"))
 	if err == nil {
@@ -115,7 +115,7 @@ func NewConfiguration() *EnvVars {
 	if transform_path != "" {
 		result.TransformPath = transform_path
 	} else {
-		logger.Info("TRANSFORM_PATH not set, using default value ./transforms")
+		logger.Info("TRANSFORM_PATH not set, using default value ./transform")
 	}
 
 	return result
