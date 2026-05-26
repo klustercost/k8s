@@ -5,57 +5,49 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/jsonata-go/jsonata"
+	jsonata "github.com/blues/jsonata-go"
 	"k8s.io/klog/v2"
 
 	model "klustercost/monitor/pkg/model"
 )
 
 type Transform struct {
-	jsonataInstance   jsonata.JSONataInstance
 	logger            klog.Logger
-	labelsTransform   jsonata.Expression
+	labelsTransform   *jsonata.Expr
 	metricsTransforms []metricsTransform
 }
 
 func NewTransform(ctx context.Context, path string) *Transform {
 	logger := klog.FromContext(ctx)
 
-	instance, err := jsonata.OpenLatest()
-	if err != nil {
-		logger.Error(err, "Unable to create JSONata instance")
-		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-	}
-
 	var metricsTransforms []metricsTransform
 
-	metricsTransforms, err = NewMetricsTransformsFromFile(path+"fact.json", instance)
+	metricsTransforms, err := NewMetricsTransformsFromFile(path + "fact.json")
 	if err != nil {
 		logger.Error(err, "Unable to read metrics transforms")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
-	transform, err := getTransform(path+"object.jsonata", instance)
+	transform, err := getTransform(path + "object.jsonata")
 	if err != nil {
 		logger.Error(err, "Unable to read template transform")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
 	return &Transform{
-		jsonataInstance:   instance,
 		logger:            logger,
 		labelsTransform:   transform,
 		metricsTransforms: metricsTransforms,
 	}
 }
 
-func getTransform(path string, jsonataInstance jsonata.JSONataInstance) (jsonata.Expression, error) {
+func getTransform(path string) (*jsonata.Expr, error) {
 	transform, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	expression, err := jsonataInstance.Compile(string(transform), false)
+	expression, err := jsonata.Compile(string(transform))
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +66,7 @@ func (c *Transform) addMetrics(ctx context.Context, keyValues model.DataExchange
 
 func (c *Transform) getTransformedObject(sourceJSON []byte) (model.DataExchange, error) {
 	var transformedObject model.DataExchange
-	transformedJSON, err := c.labelsTransform.Evaluate(sourceJSON, nil)
+	transformedJSON, err := c.labelsTransform.EvalBytes(sourceJSON)
 	if err != nil {
 		c.logger.Error(err, "Unable to evaluate template")
 		return nil, err

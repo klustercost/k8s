@@ -11,10 +11,11 @@ import (
 	"strings"
 	"time"
 
+	_ "klustercost/monitor/pkg/jsonata_ext"
 	model "klustercost/monitor/pkg/model"
 	signals "klustercost/monitor/pkg/signals"
 
-	"github.com/jsonata-go/jsonata"
+	jsonata "github.com/blues/jsonata-go"
 	prometheusv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 )
 
@@ -24,10 +25,10 @@ type metricsTransform struct {
 	Query             string `json:"query"`
 	Transform         string `json:"transform"`
 	expansionKeys     []string
-	jsonataExpression jsonata.Expression
+	jsonataExpression *jsonata.Expr
 }
 
-func NewMetricsTransformsFromFile(path string, jsonataInstance jsonata.JSONataInstance) ([]metricsTransform, error) {
+func NewMetricsTransformsFromFile(path string) ([]metricsTransform, error) {
 	var transforms []metricsTransform
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -40,7 +41,7 @@ func NewMetricsTransformsFromFile(path string, jsonataInstance jsonata.JSONataIn
 	}
 
 	for idx := range transforms {
-		err := transforms[idx].Compile(jsonataInstance)
+		err := transforms[idx].Compile()
 		if err != nil {
 			return nil, err
 		}
@@ -55,18 +56,18 @@ func (c *metricsTransform) computeKeySet() {
 	c.expansionKeys = slices.Compact(c.expansionKeys)
 }
 
-func (c *metricsTransform) compileTransform(jsonataInstance jsonata.JSONataInstance) error {
+func (c *metricsTransform) compileTransform() error {
 	var err error
-	c.jsonataExpression, err = jsonataInstance.Compile(c.Transform, false)
+	c.jsonataExpression, err = jsonata.Compile(c.Transform)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *metricsTransform) Compile(jsonataInstance jsonata.JSONataInstance) error {
+func (c *metricsTransform) Compile() error {
 	c.computeKeySet()
-	return c.compileTransform(jsonataInstance)
+	return c.compileTransform()
 }
 
 func (c *metricsTransform) queryWithContext(from model.DataExchange) (string, error) {
@@ -117,7 +118,7 @@ func (c *metricsTransform) AddMetrics(ctx context.Context, transformedObject mod
 		}
 	}
 
-	metricJSON, err = c.jsonataExpression.Evaluate(metricJSON, nil)
+	metricJSON, err = c.jsonataExpression.EvalBytes(metricJSON)
 	if err != nil {
 		signals.Logger.Error(err, "Unable to evaluate template")
 		return transformedObject, err
