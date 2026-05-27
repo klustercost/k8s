@@ -42,25 +42,6 @@ func (pg *persistence_pg) Close() {
 }
 
 // This function inserts the details of a pod into the database
-// It calls the klustercost.register_pod_data stored procedure
-func (pg *persistence_pg) InsertPod(pod_uid, pod_name, namespace, node string, podUsage *model.PodConsumption, appLabels *model.PodAppLabels, podResources *model.PodResources) error {
-	_, err := pg.db_connection.Exec(
-		"CALL klustercost.register_pod_data($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULLIF($11,''), NULLIF($12,''), NULLIF($13,''), NULLIF($14,''), NULLIF($15,''), NULLIF($16,''))",
-		pod_uid, pod_name, namespace, node,
-		podUsage.CPU.Value, podUsage.Memory.Value,
-		podResources.CPURequest, podResources.CPULimit, podResources.MemRequest, podResources.MemLimit,
-		appLabels.Name, appLabels.Instance, appLabels.Version,
-		appLabels.Component, appLabels.PartOf, appLabels.ManagedBy)
-	if err != nil {
-		fmt.Println("Error inserting pod details into the database:", err)
-		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-		return err
-	}
-	fmt.Println("INSERTED POD:", pod_name, namespace, "memory usage", podUsage.Memory, "CPU usage", podUsage.CPU, "node", node)
-	return nil
-}
-
-// This function inserts the details of a pod into the database
 // It calls the klustercost.register_pod_data_json stored procedure
 func (pg *persistence_pg) InsertPodJson(pod_json string) error {
 	_, err := pg.db_connection.Exec("CALL klustercost.register_pod_json($1)", pod_json)
@@ -84,35 +65,5 @@ func (pg *persistence_pg) InsertNode(node_name string, nodeMisc *model.NodeMisc)
 		return err
 	}
 	fmt.Println("INSERTED Node:", node_name, "memory", nodeMisc.Memory, "CPU", nodeMisc.CPU, "labels", nodeMisc.Labels)
-	return nil
-}
-
-// This function inserts the details of an owner into the database
-// func InsertOwner(name string, namespace string, own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels string) error {
-func (pg *persistence_pg) InsertOwner(name string, namespace string, allRef *model.AppOwnerReferences) error {
-
-	_, err := pg.db_connection.Exec("INSERT INTO klustercost.tbl_owners(name, namespace,  own_version, own_kind, own_uid, owner_version, owner_kind, owner_name, owner_uid, labels) VALUES($1, $2, $3, $4, NULLIF($5,''), NULLIF($6,''), NULLIF($7,''),NULLIF($8,''), NULLIF($9,''), NULLIF($10,''))",
-		name, namespace, allRef.OwnVersion, allRef.OwnKind, allRef.OwnerUid, allRef.OwnerVersion, allRef.OwnKind, allRef.OwnerName, allRef.OwnerUid, allRef.Labels)
-	if err != nil {
-		fmt.Println("Error inserting owner details into the database:", err)
-		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-		return err
-	}
-	fmt.Println("INSERTED Owner:", name, namespace, "owner kind", allRef.OwnKind)
-	return nil
-}
-
-// This function inserts the details of a service into the database
-// func InsertService(name string, namespace string, own_uid, app_label, labels, selector string) error {
-func (pg *persistence_pg) InsertService(name string, namespace string, svcRef *model.ServiceMisc) error {
-
-	_, err := pg.db_connection.Exec("INSERT INTO klustercost.tbl_services(service_name, namespace, own_uid, app_label, labels, selector) VALUES($1, $2, $3, NULLIF($4,''), NULLIF($5,''), NULLIF($6,''))",
-		name, namespace, svcRef.UID, svcRef.AppLabel, svcRef.Labels, svcRef.Selector)
-	if err != nil {
-		fmt.Println("Error inserting service details into the database:", err)
-		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-		return err
-	}
-	fmt.Println("INSERTED Service:", name, namespace, "service selector", svcRef.Selector)
 	return nil
 }
