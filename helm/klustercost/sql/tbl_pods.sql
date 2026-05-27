@@ -30,10 +30,14 @@ CREATE INDEX IF NOT EXISTS tbl_pods_namespace
     (namespace COLLATE pg_catalog."default")
     TABLESPACE pg_default;
 
+CREATE INDEX IF NOT EXISTS tbl_pods_node
+    ON klustercost.tbl_pods USING hash
+    (node COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
 CREATE INDEX IF NOT EXISTS tbl_pods_uid
-    ON klustercost.tbl_pods USING btree
-    (uid COLLATE pg_catalog."default" ASC NULLS LAST)
-    WITH (fillfactor=100, deduplicate_items=True)
+    ON klustercost.tbl_pods USING hash
+    (uid COLLATE pg_catalog."default")
     TABLESPACE pg_default;
 
 create type pod_type as (
@@ -71,9 +75,8 @@ CREATE INDEX IF NOT EXISTS tbl_pod_data_timestamp
     TABLESPACE pg_default;
 
 CREATE INDEX IF NOT EXISTS tbl_pod_data_uid
-    ON klustercost.tbl_pod_data USING btree
-    (uid COLLATE pg_catalog."default" ASC NULLS LAST)
-    WITH (fillfactor=100, deduplicate_items=True)
+    ON klustercost.tbl_pod_data USING hash
+    (uid COLLATE pg_catalog."default")
     TABLESPACE pg_default;
 
 create type pod_data_type as (
