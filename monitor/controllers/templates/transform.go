@@ -22,13 +22,13 @@ func NewTransform(ctx context.Context, path string) *Transform {
 
 	var metricsTransforms []metricsTransform
 
-	metricsTransforms, err := NewMetricsTransformsFromFile(path + "fact.json")
+	metricsTransforms, err := NewMetricsTransformsFromFile(path + "metrics.json")
 	if err != nil {
 		logger.Error(err, "Unable to read metrics transforms")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
-	transform, err := getTransform(path + "object.jsonata")
+	transform, err := getTransform(path + "labels.jsonata")
 	if err != nil {
 		logger.Error(err, "Unable to read template transform")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
