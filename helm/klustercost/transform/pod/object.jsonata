@@ -1,24 +1,12 @@
-(
-  $quantity_cpu := function($value){
-    $contains($value,"m") ? $number($substring($value,0,$length($value)-1)) / 1000 : $number($value)
-  };
-  $quantity_memory := function($value){
-    $contains($value,"Gi") ? $number($substring($value,0,$length($value)-2)) * 1024 * 1024 : $contains($value,"Mi") ? $number($substring($value,0,$length($value)-2)) * 1024 : $contains($value,"Ki") ? $number($substring($value,0,$length($value)-2)) : $contains($value,"K") ? $number($substring($value,0,$length($value)-1)) * 1000 / 1024 :  $contains($value,"M") ? $number($substring($value,0,$length($value)-1)) * 1000 :  $contains($value,"G") ? $number($substring($value,0,$length($value)-1)) * 1000 * 1000 :  $number($value) / 1024
-  };
-  {
-    "uid":metadata.uid,
-    "name":metadata.name,
-    "namespace":metadata.namespace,
-    "node": spec.nodeName,
-    "app.name":metadata.labels.`app.kubernetes.io/name`,
-    "app.instance":metadata.labels.`app.kubernetes.io/instance`,
-    "app.component":metadata.labels.`app.kubernetes.io/component`,
-    "app.version":metadata.labels.`app.kubernetes.io/version`,
-    "app.part-of":metadata.labels.`app.kubernetes.io/part-of`,
-    "app.managed-by":metadata.labels.`app.kubernetes.io/managed-by`,    
-    "cpu_request":$sum($map( spec.containers.resources.requests.cpu,  $quantity_cpu)),
-    "cpu_limit":$sum($map( spec.containers.resources.limits.cpu,  $quantity_cpu)),
-    "mem_request":$sum($map( spec.containers.resources.requests.memory,  $quantity_memory)) / 1024,
-    "mem_limit":$sum($map( spec.containers.resources.limits.memory,  $quantity_memory)) / 1024
-  }
-)
+{
+  "uid":metadata.uid,
+  "name":metadata.name,
+  "namespace":metadata.namespace,
+  "node": spec.nodeName,
+  "app.name":metadata.labels.`app.kubernetes.io/name`,
+  "app.instance":metadata.labels.`app.kubernetes.io/instance`,
+  "app.component":metadata.labels.`app.kubernetes.io/component`,
+  "app.version":metadata.labels.`app.kubernetes.io/version`,
+  "app.part-of":metadata.labels.`app.kubernetes.io/part-of`,
+  "app.managed-by":metadata.labels.`app.kubernetes.io/managed-by`
+}
