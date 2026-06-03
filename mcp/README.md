@@ -2,6 +2,8 @@
 
 This project runs a lightweight [MCP](https://modelcontextprotocol.io/) server that lets you ask plain English questions about a PostgreSQL database. Under the hood it uses OpenAI to translate your question into SQL, runs the query, and returns the results as JSON.
 
+It also exposes a JSONata-to-PostgreSQL DDL generator. That endpoint accepts a JSONata object expression and returns SQL text for a table, composite type, and indexes. It does not execute the generated DDL.
+
 Built with [FastMCP](https://github.com/jlowin/fastmcp), a Python framework that makes it easy to create MCP-compatible servers with minimal boilerplate.
 
 ## Prerequisites
@@ -21,6 +23,7 @@ mcp/
 │   ├── Dockerfile          # Docker image for the MCP server
 │   ├── requirements.txt    # Server Python dependencies
 │   ├── my_server.py        # The MCP server (runs the tools)
+│   ├── jsonata_ddl_prompt.txt # JSONata-to-DDL prompt template
 │   └── system_prompt.txt   # OpenAI system prompt (editable)
 └── client/
     ├── Dockerfile          # Docker image for the HTTP client
@@ -73,8 +76,8 @@ PG_SCHEMA=klustercost
 | `PG_PORT`        | PostgreSQL server port                           | `5432`      |
 | `PG_USER`        | Database user                                    | `postgres`  |
 | `PG_PASSWORD`    | Database password                                | (empty)     |
-| `PG_DATABASE`    | Name of the database to connect to               | `postgres`  |
-| `PG_SCHEMA`      | Schema to read tables from (used for introspection) | `public`  |
+| `PG_DATABASE`    | Name of the database to connect to               | `klustercost` |
+| `PG_SCHEMA`      | Schema to read tables from and default DDL schema | `klustercost` |
 
 ## Running
 
@@ -98,7 +101,7 @@ You have two options:
 python my_client.py
 ```
 
-This starts an HTTP server on `http://0.0.0.0:8080` that accepts questions via a REST endpoint:
+This starts an HTTP server on `http://0.0.0.0:8080` that accepts questions and JSONata DDL requests via REST endpoints:
 
 ```bash
 curl -X POST http://localhost:8080/ask \
@@ -106,11 +109,24 @@ curl -X POST http://localhost:8080/ask \
   -d '{"question": "Which pod consumed the most CPU in the last 1 hour?"}'
 ```
 
+Generate PostgreSQL DDL from JSONata:
+
+```bash
+curl -X POST http://localhost:8080/translate-jsonata \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonata": "{ \"uid\":metadata.uid, \"name\":metadata.name, \"namespace\":metadata.namespace, \"node\": spec.nodeName }",
+    "table_name": "tbl_pods",
+    "schema": "klustercost",
+    "index_columns": ["uid", "namespace", "node"]
+  }'
+```
+
 See the [HTTP Endpoint](#http-endpoint) section below for full details.
 
 **Option B: MCP-compatible client**
 
-Any MCP-compatible client (Cursor, Claude Desktop, etc.) can connect to `http://127.0.0.1:8000/mcp` and call the `ask_db` tool directly.
+Any MCP-compatible client (Cursor, Claude Desktop, etc.) can connect to `http://127.0.0.1:8000/mcp` and call the `ask_db` or `translate_jsonata_to_psql` tools directly.
 
 ## Example Questions
 
@@ -130,12 +146,12 @@ You do **not** need to know the exact table or column names. The server reads th
 
 The system has two parts: a **client** and a **server**.
 
-**The client** (`my_client.py`) is a lightweight HTTP server built with Python's `http.server`. It exposes a `POST /ask` endpoint that accepts a JSON body, forwards the question to the MCP server over the MCP protocol, and returns the result as JSON. It has no knowledge of SQL, PostgreSQL, or OpenAI -- it's purely a pass-through.
+**The client** (`my_client.py`) is a lightweight FastAPI HTTP server. It exposes `POST /ask` and `POST /translate-jsonata`, forwards requests to the MCP server over the MCP protocol, and returns the result as JSON. It has no knowledge of SQL, PostgreSQL, or OpenAI -- it's a pass-through bridge.
 
 **The server** (`my_server.py`) does all the work in four stages:
 
 1. **Schema introspection** -- Queries `information_schema.columns` in PostgreSQL to get the current table names, column names, and data types. This happens on every request, so the server always reflects the latest database structure.
-2. **SQL generation** -- Sends the schema + your question to OpenAI via the Chat Completions API. A system prompt (loaded from `system_prompt.txt`) tells the model the domain context, the table relationships, and the PostgreSQL syntax rules. OpenAI returns a raw `SELECT` query. It never sees your actual data -- only the table/column metadata.
+2. **SQL generation** -- Sends the schema + your question to OpenAI via the Responses API. A system prompt (loaded from `system_prompt.txt`) tells the model the domain context, the table relationships, and the PostgreSQL syntax rules. OpenAI returns a raw `SELECT` query. It never sees your actual data -- only the table/column metadata.
 3. **Query execution** -- Runs the generated SQL against PostgreSQL and packs the rows into dictionaries.
 4. **Response** -- Returns the results as JSON back to the client.
 
@@ -168,6 +184,7 @@ The MCP client (`my_client.py`) runs an HTTP server that acts as a bridge betwee
 | Method | Path       | Description                              |
 |--------|------------|------------------------------------------|
 | POST   | `/ask`     | Send a natural-language question to the AI |
+| POST   | `/translate-jsonata` | Generate PostgreSQL DDL from a JSONata object expression |
 | GET    | `/healthz` | Health check (returns `{"status": "ok"}`) |
 
 ### Sending a Question
@@ -185,6 +202,99 @@ Successful response (HTTP 200):
   "answer": "[{\"name\": \"pod-abc\", \"cpu\": 0.85}, ...]"
 }
 ```
+
+### Generating DDL from JSONata
+
+Use `POST /translate-jsonata` when you have a JSONata object expression and want PostgreSQL DDL for storing the transformed objects.
+
+The endpoint calls the MCP server tool `translate_jsonata_to_psql`. The MCP server calls OpenAI, parses strict JSON from the model, validates the generated SQL, and returns the DDL text. The DDL is never executed.
+
+Step by step:
+
+1. Start the MCP server from `mcp/server`:
+
+```bash
+python my_server.py
+```
+
+2. Start the HTTP client from `mcp/client`:
+
+```bash
+python my_client.py
+```
+
+3. Send a request to the client:
+
+```bash
+curl -X POST http://localhost:8080/translate-jsonata \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonata": "{ \"uid\":metadata.uid, \"name\":metadata.name, \"namespace\":metadata.namespace, \"node\": spec.nodeName, \"app.name\":metadata.labels.`app.kubernetes.io/name`, \"app.component\":metadata.labels.`app.kubernetes.io/component` }",
+    "table_name": "tbl_pods",
+    "schema": "klustercost",
+    "index_columns": ["uid", "namespace", "node", "app.name", "app.component"]
+  }'
+```
+
+Request fields:
+
+| Field | Required | Description |
+| ----- | -------- | ----------- |
+| `jsonata` | Yes | JSONata object expression. The object keys become SQL columns. |
+| `table_name` | Yes | Target table name. Must be a plain PostgreSQL identifier, for example `tbl_pods`. |
+| `type_name` | No | Composite type name. If omitted, `tbl_pods` becomes `pod_type`. |
+| `schema` | No | Target schema. Defaults to `PG_SCHEMA`, which defaults to `klustercost`. |
+| `index_columns` | No | Column names that should have indexes when possible. Dotted names such as `app.name` are allowed as column names. |
+
+Example successful response:
+
+```json
+{
+  "status": "success",
+  "ddl": "CREATE TABLE IF NOT EXISTS klustercost.tbl_pods (...);\nCREATE TYPE klustercost.pod_type AS (...);\nCREATE INDEX IF NOT EXISTS tbl_pods_uid ON klustercost.tbl_pods USING hash (uid);",
+  "table_name": "tbl_pods",
+  "type_name": "pod_type",
+  "schema": "klustercost",
+  "warnings": []
+}
+```
+
+The generated SQL should include:
+
+- `CREATE TABLE IF NOT EXISTS klustercost.tbl_pods`
+- `CREATE TYPE klustercost.pod_type AS`
+- `CREATE INDEX IF NOT EXISTS ... ON klustercost.tbl_pods`
+- Quoted dotted column names, for example `"app.name"`
+
+Validation rules:
+
+- The model must return strict JSON with `ddl` and `warnings`.
+- `CREATE SCHEMA` is not allowed.
+- Only `CREATE TABLE IF NOT EXISTS`, `CREATE TYPE`, and `CREATE INDEX IF NOT EXISTS` are allowed.
+- `DROP`, `DELETE`, `UPDATE`, `INSERT`, `ALTER`, `TRUNCATE`, `CALL`, `COPY`, `DO`, `GRANT`, `REVOKE`, and `EXECUTE` are rejected.
+- The generated DDL must target the requested schema, table name, and type name.
+- References to other schemas are rejected.
+- SQL comments are rejected.
+
+If validation fails, the endpoint returns a JSON body with `status: "error"` and an `error` message. It still does not execute anything.
+
+### Calling the MCP Tool Directly
+
+MCP-compatible clients can call `translate_jsonata_to_psql` directly on `http://localhost:8000/mcp`.
+
+Tool arguments:
+
+```json
+{
+  "jsonata": "{ \"uid\":metadata.uid, \"name\":metadata.name }",
+  "table_name": "tbl_pods",
+  "type_name": null,
+  "schema": "klustercost",
+  "index_columns": ["uid"]
+}
+```
+
+The tool returns a JSON string using the same response shape as `POST /translate-jsonata`.
 
 ### Error Responses
 
@@ -359,5 +469,5 @@ Set `mcp.enabled: false` in values.yaml (or `--set mcp.enabled=false`) to skip d
 
 - Only **read-only** (`SELECT`) queries are generated and executed. The system will not modify your data.
 - The OpenAI model is configurable via `mcp.openai.model` in values.yaml or `OPENAI_MODEL` env var (default: `gpt-4o-mini`).
-- The system prompt lives in `system_prompt.txt` and is baked into the server image. Edit it and rebuild to change the AI's behavior.
+- The database question prompt lives in `system_prompt.txt`; the JSONata DDL prompt lives in `jsonata_ddl_prompt.txt`. Both are baked into the server image. Edit them and rebuild to change the AI's behavior.
 - If the generated SQL fails, the error message will include the SQL that was attempted, so you can see what went wrong and rephrase your question.
