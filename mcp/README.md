@@ -236,6 +236,27 @@ curl -X POST http://localhost:8080/translate-jsonata \
   }'
 ```
 
+PowerShell example using the repo's pod labels JSONata file:
+
+```powershell
+$jsonata = [string](Get-Content .\helm\klustercost\transform\pod\labels.jsonata -Raw)
+
+$body = @{
+  jsonata = $jsonata
+  table_name = "tbl_pods"
+  schema = "klustercost"
+  index_columns = @("uid", "namespace", "node", "app.name", "app.component")
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://localhost:8080/translate-jsonata `
+  -ContentType "application/json" `
+  -Body $body
+```
+
+The `[string](...)` cast is important in Windows PowerShell. Without it, `ConvertTo-Json` can serialize `Get-Content` as an object with metadata instead of a plain JSONata string.
+
 Request fields:
 
 | Field | Required | Description |
