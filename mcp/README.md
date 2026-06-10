@@ -22,7 +22,7 @@ mcp/
 ├── server/
 │   ├── Dockerfile          # Docker image for the MCP server
 │   ├── requirements.txt    # Server Python dependencies
-│   ├── my_server.py        # MCP entrypoint (tool definitions and server startup)
+│   ├── server.py           # MCP entrypoint (tool definitions and server startup)
 │   ├── db_reader.py        # Database schema lookup, SQL generation, and query execution
 │   ├── ddl_generator.py    # JSONata-to-PostgreSQL DDL generation and validation
 │   ├── jsonata_ddl_prompt.txt # JSONata-to-DDL prompt template
@@ -30,7 +30,7 @@ mcp/
 └── client/
     ├── Dockerfile          # Docker image for the HTTP client
     ├── requirements.txt    # Client Python dependencies
-    └── my_client.py        # HTTP server that exposes the /ask endpoint
+    └── client.py           # HTTP server that exposes the /ask endpoint
 ```
 
 ## Setup
@@ -88,7 +88,7 @@ You need **two terminals** (both with the virtual environment activated).
 ### Terminal 1 -- Start the server
 
 ```bash
-python my_server.py
+python server.py
 ```
 
 The server starts on `http://127.0.0.1:8000/mcp` and waits for connections.
@@ -100,7 +100,7 @@ You have two options:
 **Option A: HTTP client endpoint**
 
 ```bash
-python my_client.py
+python client.py
 ```
 
 This starts an HTTP server on `http://0.0.0.0:8080` that accepts questions and JSONata DDL requests via REST endpoints:
@@ -148,9 +148,9 @@ You do **not** need to know the exact table or column names. The server reads th
 
 The system has two parts: a **client** and a **server**.
 
-**The client** (`my_client.py`) is a lightweight FastAPI HTTP server. It exposes `POST /ask` and `POST /translate-jsonata`, forwards requests to the MCP server over the MCP protocol, and returns the result as JSON. It has no knowledge of SQL, PostgreSQL, or OpenAI -- it's a pass-through bridge.
+**The client** (`client.py`) is a lightweight FastAPI HTTP server. It exposes `POST /ask` and `POST /translate-jsonata`, forwards requests to the MCP server over the MCP protocol, and returns the result as JSON. It has no knowledge of SQL, PostgreSQL, or OpenAI -- it's a pass-through bridge.
 
-**The server** (`my_server.py`) exposes MCP tools and delegates to two modules:
+**The server** (`server.py`) exposes MCP tools and delegates to two modules:
 
 - **`db_reader.py`** — schema introspection, OpenAI SQL generation, query execution, and answer formatting
 - **`ddl_generator.py`** — JSONata-to-PostgreSQL DDL generation, parsing, and validation
@@ -166,7 +166,7 @@ The ask-db flow works in four stages:
  curl POST /ask
   │
   ▼
- my_client.py ──MCP protocol──► my_server.py
+ client.py ──MCP protocol──► server.py
   (HTTP :8080)                    (HTTP :8000/mcp)
                                        │
                               ┌────────┼────────┐
@@ -184,7 +184,7 @@ The ask-db flow works in four stages:
 
 ## HTTP Endpoint
 
-The MCP client (`my_client.py`) runs an HTTP server that acts as a bridge between plain HTTP requests and the MCP server. It accepts a natural-language question, forwards it to the MCP server via the MCP protocol, and returns the AI-generated result as JSON.
+The MCP client (`client.py`) runs an HTTP server that acts as a bridge between plain HTTP requests and the MCP server. It accepts a natural-language question, forwards it to the MCP server via the MCP protocol, and returns the AI-generated result as JSON.
 
 ### Available Endpoints
 
@@ -221,13 +221,13 @@ Step by step:
 1. Start the MCP server from `mcp/server`:
 
 ```bash
-python my_server.py
+python server.py
 ```
 
 2. Start the HTTP client from `mcp/client`:
 
 ```bash
-python my_client.py
+python client.py
 ```
 
 3. Send a request to the client:

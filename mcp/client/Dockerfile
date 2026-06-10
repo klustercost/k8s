@@ -13,4 +13,4 @@ COPY *.py ./
 USER appuser
 
 
-CMD ["python", "my_client.py"]
+CMD ["python", "client.py"]

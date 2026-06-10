@@ -8,10 +8,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY my_server.py db_reader.py ddl_generator.py system_prompt.txt jsonata_ddl_prompt.txt answer_formatter.py answer_prompt.txt ./
+COPY server.py db_reader.py ddl_generator.py system_prompt.txt jsonata_ddl_prompt.txt answer_formatter.py answer_prompt.txt ./
 
 USER appuser
 
 EXPOSE 8000
 
-CMD ["python", "my_server.py"]
+CMD ["python", "server.py"]
