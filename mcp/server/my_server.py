@@ -227,10 +227,6 @@ def generate_jsonata_ddl(
 
     response = openai_client.responses.create(
         model=OPENAI_MODEL,
-        instructions=(
-            "You generate conservative PostgreSQL DDL from JSONata object expressions. "
-            "You return strict JSON only."
-        ),
         input=build_jsonata_ddl_prompt(jsonata, table_name, type_name, schema, index_columns),
     )
 
