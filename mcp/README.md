@@ -22,7 +22,9 @@ mcp/
 ├── server/
 │   ├── Dockerfile          # Docker image for the MCP server
 │   ├── requirements.txt    # Server Python dependencies
-│   ├── my_server.py        # The MCP server (runs the tools)
+│   ├── my_server.py        # MCP entrypoint (tool definitions and server startup)
+│   ├── db_reader.py        # Database schema lookup, SQL generation, and query execution
+│   ├── ddl_generator.py    # JSONata-to-PostgreSQL DDL generation and validation
 │   ├── jsonata_ddl_prompt.txt # JSONata-to-DDL prompt template
 │   └── system_prompt.txt   # OpenAI system prompt (editable)
 └── client/
@@ -148,7 +150,12 @@ The system has two parts: a **client** and a **server**.
 
 **The client** (`my_client.py`) is a lightweight FastAPI HTTP server. It exposes `POST /ask` and `POST /translate-jsonata`, forwards requests to the MCP server over the MCP protocol, and returns the result as JSON. It has no knowledge of SQL, PostgreSQL, or OpenAI -- it's a pass-through bridge.
 
-**The server** (`my_server.py`) does all the work in four stages:
+**The server** (`my_server.py`) exposes MCP tools and delegates to two modules:
+
+- **`db_reader.py`** — schema introspection, OpenAI SQL generation, query execution, and answer formatting
+- **`ddl_generator.py`** — JSONata-to-PostgreSQL DDL generation, parsing, and validation
+
+The ask-db flow works in four stages:
 
 1. **Schema introspection** -- Queries `information_schema.columns` in PostgreSQL to get the current table names, column names, and data types. This happens on every request, so the server always reflects the latest database structure.
 2. **SQL generation** -- Sends the schema + your question to OpenAI via the Responses API. A system prompt (loaded from `system_prompt.txt`) tells the model the domain context, the table relationships, and the PostgreSQL syntax rules. OpenAI returns a raw `SELECT` query. It never sees your actual data -- only the table/column metadata.
