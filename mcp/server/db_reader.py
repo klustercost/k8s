@@ -1,32 +1,23 @@
-import os
 import json
 import logging
+import os
 import time
 from functools import lru_cache
 
 import psycopg2
 from dotenv import load_dotenv
 from openai import OpenAI
-from fastmcp import FastMCP, Context
-from dotenv import load_dotenv
+
 from answer_formatter import format_answer
 
 load_dotenv(override=False)
 
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
-logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL, logging.INFO),
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
 log = logging.getLogger("mcp-server")
 
-# System prompt file
 PROMPT_FILE = os.path.join(os.path.dirname(__file__), "system_prompt.txt")
 with open(PROMPT_FILE, encoding="utf-8") as f:
     SYSTEM_PROMPT_TEMPLATE = f.read()
 
-# --- Configuration from .env ---
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
 OPENAI_ANSWER_MODEL = os.getenv("OPENAI_ANSWER_MODEL", OPENAI_MODEL)
@@ -38,7 +29,12 @@ PG_DATABASE = os.getenv("PG_DATABASE", "klustercost")
 PG_SCHEMA = os.getenv("PG_SCHEMA", "klustercost")
 
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
-mcp = FastMCP("My MCP Server")
+
+REFUSE_MESSAGE = (
+    "Sorry, I can only answer questions about the Kubernetes cluster database. "
+    "Please try again with a question about the cluster. "
+    "For example: Which pods are using the most CPU today?"
+)
 
 
 def get_pg_connection():
@@ -50,10 +46,7 @@ def get_pg_connection():
         dbname=PG_DATABASE,
     )
 
-# cache schema info
-# lru_cache stands for Least Recently Used Cache. 
-# It's a decorator from functools that remembers the result of a function call so it doesn't have to run again.
-# maxsize=1 means it only remembers the last result.
+
 @lru_cache(maxsize=1)
 def get_schema_info() -> str:
     """Fetch table and column metadata from information_schema."""
@@ -88,7 +81,7 @@ def get_schema_info() -> str:
             conn.close()
 
 
-def generate_sql(question: str, schema: str, response_id: str = None) -> str:
+def generate_sql(question: str, schema: str, response_id: str = None) -> tuple[str, str]:
     """Ask OpenAI to produce a read-only SQL query for the given question."""
     log.info("Generating SQL via OpenAI (model=%s) …", OPENAI_MODEL)
     t0 = time.perf_counter()
@@ -97,7 +90,7 @@ def generate_sql(question: str, schema: str, response_id: str = None) -> str:
         model=OPENAI_MODEL,
         previous_response_id=response_id,
         instructions=SYSTEM_PROMPT_TEMPLATE.format(schema=schema),
-        input=question
+        input=question,
     )
 
     elapsed = time.perf_counter() - t0
@@ -106,7 +99,7 @@ def generate_sql(question: str, schema: str, response_id: str = None) -> str:
         raise ValueError("OpenAI returned an empty response — no SQL was generated")
     sql = content.strip()
     log.info(f"SQL generated in {elapsed:.2f}:\n{sql}")
-    return sql,  response.id
+    return sql, response.id
 
 
 def run_query(sql: str) -> list[dict]:
@@ -133,59 +126,44 @@ def run_query(sql: str) -> list[dict]:
             conn.close()
 
 
-# --- MCP Tools ---
-
-@mcp.tool
-async def ask_db(question: str, response_id: str | None, ctx: Context) -> str:
-    """Ask a natural-language question about the PostgreSQL database.
-
-    The question is converted to SQL via OpenAI, executed, and the results
-    are returned as a JSON object with two keys:
-      - "raw":     the structured query results (list of row objects)
-      - "natural": a human-readable, conversational answer (or null on failure)
-    """
-    log.info("──── New question received ────")
-    log.info(f"User question: {question}")
-    log.info(f"Previous response ID: {response_id}")
+def process_question(question: str, response_id: str | None) -> dict:
+    """Run the full ask_db flow: schema lookup, SQL generation, query, and formatting."""
     sql = None
     try:
         schema = get_schema_info()
         sql, response_id = generate_sql(question, schema, response_id)
         if sql.strip() == "REFUSE":
             log.warning("Question refused by LLM (off-topic)")
-            return json.dumps({
-                "raw": "Sorry, I can only answer questions about the Kubernetes cluster database. Please try again with a question about the cluster. For example: Which pods are using the most CPU today?",
-                "natural": "Sorry, I can only answer questions about the Kubernetes cluster database. Please try again with a question about the cluster. For example: Which pods are using the most CPU today?",
-                "status": "refused"
-            }, indent=2)
+            return {
+                "raw": REFUSE_MESSAGE,
+                "natural": REFUSE_MESSAGE,
+                "status": "refused",
+            }
         rows = run_query(sql)
     except Exception as e:
         sql_info = f"\nGenerated SQL was:\n{sql}" if sql else ""
         log.error("ask_db failed: %s%s", e, sql_info)
-        return json.dumps({
-            "raw": f"Error: {e}{sql_info}",
-            "natural": f"Error: {e}{sql_info}",
-            "status": "error"
-        }, indent=2)
+        error_text = f"Error: {e}{sql_info}"
+        return {
+            "raw": error_text,
+            "natural": error_text,
+            "status": "error",
+        }
 
     natural = None
     try:
-        natural = format_answer(question, json.dumps(rows, default=str), openai_client, OPENAI_ANSWER_MODEL)
+        natural = format_answer(
+            question,
+            json.dumps(rows, default=str),
+            openai_client,
+            OPENAI_ANSWER_MODEL,
+        )
     except Exception as e:
         log.error("Answer formatting failed: %s", e)
 
-    result = json.dumps({"response_id": response_id, "raw": rows, "natural": natural,"status": "success"}, indent=2, default=str)
-    log.info(f"Returning {len(rows)} row(s) to client")
-    log.debug(f"Full result payload:\n{result}")
-    log.info("──── Question complete ────")
-
-    return result
-
-
-if __name__ == "__main__":
-    mcp.run(
-        transport="streamable-http",
-        host=os.getenv("MCP_HOST", "0.0.0.0"),
-        port=int(os.getenv("MCP_PORT", "8000")),
-        path="/mcp",
-    )
+    return {
+        "response_id": response_id,
+        "raw": rows,
+        "natural": natural,
+        "status": "success",
+    }
