@@ -97,7 +97,9 @@ def validate_jsonata_ddl(ddl: str, table_name: str, type_name: str, schema: str)
         raise ValueError("Generated DDL is empty")
 
     table_ref = rf"{sql_name_pattern(schema)}\s*\.\s*{sql_name_pattern(table_name)}"
-    type_ref = rf"{sql_name_pattern(schema)}\s*\.\s*{sql_name_pattern(type_name)}"
+    qualified_type_ref = rf"{sql_name_pattern(schema)}\s*\.\s*{sql_name_pattern(type_name)}"
+    unqualified_type_ref = sql_name_pattern(type_name)
+    type_ref = rf"(?:{qualified_type_ref}|{unqualified_type_ref})"
     has_table = False
     has_type = False
 
