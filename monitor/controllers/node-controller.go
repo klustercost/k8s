@@ -163,6 +163,7 @@ func (nc *NodeController) getNodeMiscellaneous(name string) *model.NodeMisc {
 	nodeMisc.Region = node.Labels["topology.kubernetes.io/region"]
 	nodeMisc.Zone = node.Labels["topology.kubernetes.io/zone"]
 	nodeMisc.OS = node.Labels["kubernetes.io/os"]
+	nodeMisc.ProviderID = strings.ToLower(strings.TrimSpace(node.Spec.ProviderID))
 
 	return nodeMisc
 }
