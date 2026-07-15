@@ -1,13 +1,13 @@
 [
     {
-        "query": "scalar(sum(rate(container_cpu_usage_seconds_total{namespace=\"$namespace$\",pod=~\"$name$\",container_name!=\"POD\"}[10m])) by (pod))",
-        "transform": "{\"cpu\": $[1].$number()}"
+        "query": "scalar(sum(rate(container_cpu_usage_seconds_total{namespace=\"$namespace$\",pod=~\"$name$\",image!=\"\",container_name!=\"POD\"}[10m])) by (pod))",
+        "transform": "{\"cpu\": $number($[1])}"
     },
     {
-        "query": "scalar(max(avg_over_time(container_memory_rss{namespace=\"$namespace$\",pod=~\"$name$\",container_name!=\"POD\"}[10m])) > max(avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace$\",pod=~\"$name$*\",container_name!=\"POD\"}[10m])) or  max(avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace$\",pod=~\"$name$\",container_name!=\"POD\"}[10m])))/1024/1024",
-        "transform": "{\"mem\": $[1].$number()}"
+        "query": "scalar(max(avg_over_time(container_memory_rss{namespace=\"$namespace$\",pod=\"$name$\",image!=\"\",container_name!=\"POD\"}[10m])) or  max(avg_over_time(container_memory_working_set_bytes{namespace=\"$namespace$\",pod=~\"$name$\",image!=\"\",container_name!=\"POD\"}[10m])))/1024/1024",
+        "transform": "{\"mem\": $number($[1])}"
     },
-    {        
+    {
         "transform": "{\"cpu_request\":$sum($map( spec.containers.resources.requests.cpu,  $cpu_quantity)),\"cpu_limit\":$sum($map( spec.containers.resources.limits.cpu,  $cpu_quantity)),\"mem_request\":$sum($map( spec.containers.resources.requests.memory,  $memory_quantity)) / 1024 / 1024,\"mem_limit\":$sum($map( spec.containers.resources.limits.memory,  $memory_quantity)) / 1024 / 1024}"
     }
 ]
