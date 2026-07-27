@@ -14,4 +14,5 @@ type NodeMisc struct {
 	Region       string
 	Zone         string
 	OS           string
+	ProviderID   string
 }
