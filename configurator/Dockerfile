@@ -1,24 +1,20 @@
-FROM python:3.13-slim-trixie  AS build
+FROM python:3.13-slim-trixie
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc libc6-dev libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN groupadd --gid 1000 appuser && \
+    useradd --uid 1000 --gid 1000 --create-home appuser
 
 WORKDIR /app
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY *.py ./
-COPY requirements.txt .
 
-RUN pip3 install --upgrade pip
-RUN pip install -r ./requirements.txt
-RUN rm -rf requirements.txt
+USER appuser
 
-## Build
-FROM gcr.io/distroless/python3-debian13:latest
-
-COPY --from=build /app /app
-COPY --from=build /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
-
-WORKDIR /app
-ENV PYTHONPATH=/usr/local/lib/python3.13/site-packages
-
-USER nonroot:nonroot
-
-CMD ["main.py"]
+CMD ["python", "main.py"]
 
