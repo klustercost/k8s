@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-configurator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "klustercost.componentSelectorLabels" (dict "context" . "component" "configurator") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "klustercost.componentLabels" (dict "context" . "component" "configurator") | nindent 8 }}
+    spec:
+      {{- if .Values.imageRegistry.enabled }}
+      imagePullSecrets:
+        - name: {{ .Release.Name }}-registry-secret
+      {{- end }}    
+      containers:
+        - name: {{ .Release.Name }}-configurator
+          image: {{ .Values.configurator.image }}
+          env:
+          - name: ddl_endpoint
+            value: http://{{ .Release.Name }}-mcp-client.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.mcp.client.port }}/translate-jsonata
+          - name: db_host
+            value: {{ .Release.Name }}-postgres-service.{{ .Release.Namespace }}.svc.cluster.local
+          - name: db_database
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-postgres-secret
+                key: POSTGRES_DB
+          - name: db_user
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-postgres-secret
+                key: POSTGRES_USER
+          - name: db_password
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-postgres-secret
+                key: POSTGRES_PASSWORD
+          - name: db_port
+            value: "{{ printf "%v" .Values.postgresql.port }}"
+          - name: server_port
+            value: "{{ .Values.configurator.targetPort }}"
+          - name: monitor
+            value: '{{ .Values.configurator.monitor }}'
+          resources:
+            limits:
+              cpu: {{ .Values.configurator.resources.limits.cpu }}
+              memory: {{ .Values.configurator.resources.limits.memory }}
+            requests:
+              cpu: {{ .Values.configurator.resources.requests.cpu }}
+              memory: {{ .Values.configurator.resources.requests.memory }}
+      serviceAccount: {{ .Release.Name }}-klustercost
+      serviceAccountName: {{ .Release.Name }}-klustercost
