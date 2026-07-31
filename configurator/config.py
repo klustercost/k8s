@@ -9,7 +9,7 @@ class _GetLogLevel:
         log_level = os.environ.get("log_level", None)
         if log_level == None:
             return logging.INFO
-        return logging.getLevelName(log_level.upper())
+        return logging.getLevelNamesMapping()[log_level.upper()]
 
 class _GetNamespace:
     def __get__(self, obj, objtype=None):
