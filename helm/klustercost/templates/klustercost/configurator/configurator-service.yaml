@@ -1,0 +1,17 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: {{ .Release.Name }}-configurator
+  labels:
+    {{- include "klustercost.componentLabels" (dict "context" . "component" "configurator") | nindent 4 }}
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: {{ .Values.configurator.port }}
+      targetPort: {{ .Values.configurator.targetPort }}
+  selector:
+    {{- include "klustercost.componentSelectorLabels" (dict "context" . "component" "configurator") | nindent 4 }}
+  type: ClusterIP
+  sessionAffinity: None
+  internalTrafficPolicy: Cluster
