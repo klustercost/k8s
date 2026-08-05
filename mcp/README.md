@@ -119,6 +119,7 @@ curl -X POST http://localhost:8080/translate-jsonata \
   -d '{
     "jsonata": "{ \"uid\":metadata.uid, \"name\":metadata.name, \"namespace\":metadata.namespace, \"node\": spec.nodeName }",
     "table_name": "tbl_pods",
+    "type_name": "pod_type",
     "schema": "klustercost",
     "index_columns": ["uid", "namespace", "node"]
   }'
