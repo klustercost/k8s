@@ -40,17 +40,21 @@ CREATE INDEX IF NOT EXISTS tbl_pods_uid
     (uid COLLATE pg_catalog."default")
     TABLESPACE pg_default;
 
-create type pod_type as (
-  uid text,
-  name text,
-  namespace text,
-  node text,
-  "app.name" text,
-  "app.instance" text,
-  "app.component" text,
-  "app.version" text,
-  "app.managed-by" text
-);
+DO $$ BEGIN
+	create type pod_type as (
+	  uid text,
+	  name text,
+	  namespace text,
+	  node text,
+	  "app.name" text,
+	  "app.instance" text,
+	  "app.component" text,
+	  "app.version" text,
+	  "app.managed-by" text
+	);
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 CREATE TABLE IF NOT EXISTS klustercost.tbl_pod_data
 (
@@ -79,15 +83,19 @@ CREATE INDEX IF NOT EXISTS tbl_pod_data_uid
     (uid COLLATE pg_catalog."default")
     TABLESPACE pg_default;
 
-create type pod_data_type as (
-  uid text,
-  cpu double precision,
-  mem double precision,
-  cpu_request double precision,	
-  cpu_limit double precision,
-  mem_request double precision,  
-  mem_limit double precision
-);
+DO $$ BEGIN
+	create type pod_data_type as (
+	  uid text,
+	  cpu double precision,
+	  mem double precision,
+	  cpu_request double precision,
+	  cpu_limit double precision,
+	  mem_request double precision,
+	  mem_limit double precision
+	);
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS klustercost.tbl_pod_data_verbose_mv
 TABLESPACE pg_default
