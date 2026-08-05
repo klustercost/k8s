@@ -124,6 +124,34 @@ def validate_jsonata_ddl(ddl: str, table_name: str, type_name: str, schema: str)
         raise ValueError("Generated DDL must include CREATE TYPE")
 
 
+def guard_create_type(ddl: str) -> str:
+    statements = [statement.strip() for statement in ddl.split(";") if statement.strip()]
+    output = []
+    type_count = 0
+
+    for statement in statements:
+        if re.match(r"^CREATE\s+TYPE\b", statement, re.IGNORECASE):
+            type_count += 1
+            if "$$" in statement:
+                raise ValueError("CREATE TYPE must not contain '$$'")
+
+            indented_statement = "\t" + statement.replace("\n", "\n\t")
+            output.append(
+                "DO $$ BEGIN\n"
+                f"{indented_statement};\n"
+                "EXCEPTION\n"
+                "    WHEN duplicate_object THEN null;\n"
+                "END $$;"
+            )
+        else:
+            output.append(f"{statement};")
+
+    if type_count != 1:
+        raise ValueError("Generated DDL must contain exactly one CREATE TYPE")
+
+    return "\n\n".join(output)
+
+
 def generate_jsonata_ddl(
     jsonata: str,
     table_name: str,
@@ -146,6 +174,7 @@ def generate_jsonata_ddl(
         raise ValueError("OpenAI returned an empty response -- no DDL was generated")
     ddl, warnings = parse_jsonata_ddl_response(content.strip())
     validate_jsonata_ddl(ddl, table_name, type_name, schema)
+    ddl = guard_create_type(ddl)
     log.info(f"JSONata DDL generated in {elapsed:.2f}s:\n{ddl}")
     return ddl, warnings
 
